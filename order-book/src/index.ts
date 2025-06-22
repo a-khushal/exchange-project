@@ -100,6 +100,9 @@ function fillOrder (
         }
     }
 
+    console.log(orderbook);
+    console.log(bookWithQuantity);
+
     return {
         status: 'accepted',
         executedQty,
