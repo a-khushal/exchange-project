@@ -1,0 +1,19 @@
+{
+  "name": "api-server",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/express": "^5.0.3",
+    "cuid": "^3.0.0",
+    "express": "^5.1.0",
+    "redis": "^5.5.6",
+    "zod": "^3.25.67"
+  }
+}
