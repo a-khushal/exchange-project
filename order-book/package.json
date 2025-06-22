@@ -1,5 +1,5 @@
 {
-  "name": "api-server",
+  "name": "order-book",
   "module": "index.ts",
   "type": "module",
   "private": true,

@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "api-server",
+      "name": "order-book",
       "dependencies": {
         "@types/express": "^5.0.3",
         "cuid": "^3.0.0",
