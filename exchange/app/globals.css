@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/* Light mode & base tokens */
+:root {
+  /* Fonts */
+  --font-sans: InterVariable, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Color Palette */
+  --color-red-400: oklch(70.4% .191 22.216);
+  --color-red-500: oklch(63.7% .237 25.331);
+  --color-red-600: #ea383b;
+  --color-red-700: #d20024;
+  --color-orange-300: oklch(83.7% .128 66.29);
+  --color-orange-500: oklch(70.5% .213 47.604);
+  --color-yellow-400: #f8c840;
+  --color-yellow-500: oklch(79.5% .184 86.047);
+  --color-green-200: #b8eed9;
+  --color-green-400: oklch(79.2% .209 151.711);
+  --color-green-500: #00c278;
+  --color-green-600: #009e63;
+  --color-green-700: #00794b;
+  --color-green-800: #005e42;
+  --color-green-900: #003a24;
+  --color-blue-200: #b5e2ff;
+  --color-blue-500: #4c94ff;
+  --color-blue-600: #0673ff;
+  --color-blue-700: #0057eb;
+  --color-purple-500: oklch(62.7% .265 303.9);
+  --color-purple-600: oklch(55.8% .288 302.321);
+  --color-pink-500: oklch(65.6% .241 354.308);
+  --color-gray-300: oklch(87.2% .01 258.338);
+  --color-gray-400: oklch(70.7% .022 261.325);
+  --color-gray-500: oklch(55.1% .027 264.364);
+  --color-gray-700: oklch(37.3% .034 259.733);
+  --color-neutral-400: #dfe0e5;
+  --color-black: #000;
+  --color-white: #fff;
+
+  /* Backgrounds & Emphasis */
+  --color-base-background-l0: #ffffff;
+  --color-base-background-l1: #f4f4f5;
+  --color-high-emphasis: #171717;
+  --color-med-emphasis: #4b5563;
+  --color-low-emphasis: #9ca3af;
+
+  /* Typography */
+  --text-2xs: .6875rem;
+  --text-xs: .75rem;
+  --text-xs--line-height: calc(1 / .75);
+  --text-sm: .875rem;
+  --text-sm--line-height: calc(1.25 / .875);
+  --text-base: 1rem;
+  --text-base--line-height: calc(1.5 / 1);
+  --text-lg: 1.125rem;
+  --text-lg--line-height: calc(1.75 / 1.125);
+  --text-xl: 1.25rem;
+  --text-xl--line-height: calc(1.75 / 1.25);
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: calc(2 / 1.5);
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: calc(2.25 / 1.875);
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: calc(2.5 / 2.25);
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1;
+
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing / Radius / Transitions */
+  --spacing: .25rem;
+  --radius-xs: .125rem;
+  --radius-sm: .25rem;
+  --radius-md: .375rem;
+  --radius-lg: .5rem;
+  --radius-xl: .75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --ease-in: cubic-bezier(.4,0,1,1);
+  --ease-out: cubic-bezier(0,0,.2,1);
+  --ease-in-out: cubic-bezier(.4,0,.2,1);
+  --default-transition-duration: .15s;
+  --default-transition-timing-function: cubic-bezier(.4,0,.2,1);
+
+  /* Effects */
+  --animate-spin: spin 1s linear infinite;
+  --animate-pulse: pulse 2s cubic-bezier(.4,0,.6,1) infinite;
+  --blur-sm: 8px;
+  --blur-xl: 24px;
+  --transition-duration-2000: 2s;
+  --scale-98: .98;
+  --skew-25: 25deg;
+  --animate-tilt: tilt 10s infinite linear;
+
+  /* Layout */
+  --breakpoint-xl: 80rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
+  --container-2xl: 42rem;
+  --container-7xl: 80rem;
+  --width-100: 25rem;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background: #0a0a0a;
+    --color-foreground: #ededed;
+
+    --color-base-background-l0: #0e0f14;
+    --color-base-background-l1: #14151b;
+    --color-base-background-l1v2: #191a20;
+    --color-base-background-l2: #202127;
+    --color-base-background-l3: #383a45;
+
+    --color-high-emphasis: #f4f4f6;
+    --color-med-emphasis: #969faf;
+    --color-low-emphasis: #75798a;
+
+    --color-base-icon: #75798a;
+    --color-base-icon-hover: #969faf;
+    --color-base-divider: #ffffff1a;
+    --color-base-border-light: #202127;
+    --color-base-border-med: #ffffff26;
+    --color-base-border-focus: #c8c9d0;
+
+    --color-button-primary-background: #fff;
+    --color-button-primary-text: #14151b;
+    --color-button-secondary-background: #202127;
+    --color-button-secondary-text: #f4f4f6;
+
+    --color-red-primary-button-background: #fd4b4e;
+    --color-red-primary-button-text: #600000;
+    --color-red-secondary-button-background: #351a1f;
+
+    --color-green-primary-button-background: #00c278;
+    --color-green-primary-button-text: #14151b;
+    --color-green-secondary-button-background: #142d25;
+    --color-green-text: #00c278;
+    --color-green-icon: #00c278;
+    --color-green-background-transparent: #00c27814;
+    --color-green-background-solid: #122322;
+
+    --color-yellow-text: #efa411;
+    --color-yellow-background-transparent: #efa41114;
+    --color-yellow-background-solid: #26201a;
+
+    --color-red-text: #fd4b4e;
+    --color-red-border: #ea383b80;
+    --color-red-background-transparent: #ea383b1f;
+
+    --color-accent-blue: #4c94ff;
+    --color-accent-blue-background: #0057eb33;
+    --color-accent-purple: #e17aff;
+    --color-accent-purple-background: #2c243c;
+  }
+}
+
+/* Expose for Tailwind (theme()) */
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --color-background: var(--color-base-background-l0);
+  --color-foreground: var(--color-high-emphasis);
+
+  --color-base-background-l0: var(--color-base-background-l0);
+  --color-base-background-l1: var(--color-base-background-l1);
+  --color-high-emphasis: var(--color-high-emphasis);
+  --color-med-emphasis: var(--color-med-emphasis);
+  --color-low-emphasis: var(--color-low-emphasis);
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-base-background-l0);
+  color: var(--color-high-emphasis);
+  font-family: var(--font-sans);
+}
+
+/* Utilities */
+.bg-base-background-l0 {
+  background-color: var(--color-base-background-l0);
+}
+.bg-base-background-l1 {
+  background-color: var(--color-base-background-l1);
+}
+.bg-base-background-l2 {
+  background-color: var(--color-base-background-l2);
+}
+
+.text-high-emphasis {
+  color: var(--color-high-emphasis);
+}
+.text-med-emphasis {
+  color: var(--color-med-emphasis);
+}
+.text-low-emphasis {
+  color: var(--color-low-emphasis);
+}
+
+.font-medium {
+  --tw-font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-medium);
+}
+
+.text-xs,
+.text-xs\/5 {
+  font-size: var(--text-xs);
+}
+.text-xs {
+  line-height: var(--tw-leading, var(--text-xs--line-height));
+}
