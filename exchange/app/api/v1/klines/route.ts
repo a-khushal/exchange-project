@@ -13,11 +13,8 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Missing parameter' }, { status: 400 });
     }
 
-    console.log('hi')
-
     try {
         const response = await axios.get(`${PROXY_URL}/klines?symbol=${symbol}&interval=${"1h"}&startTime=${parseInt(startTime)}&endTime=${parseInt(endTime)}`);
-        console.log(response);
         return NextResponse.json(response.data);
     } catch (error: any) {
         console.error("Depth fetch error:", error?.response?.data || error.message);

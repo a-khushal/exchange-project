@@ -215,3 +215,12 @@ body {
 .text-xs {
   line-height: var(--tw-leading, var(--text-xs--line-height));
 }
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none; 
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

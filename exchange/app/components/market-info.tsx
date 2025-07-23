@@ -3,25 +3,53 @@
 import { useState, useEffect } from "react";
 import { Ticker } from "../utils/types";
 import axios from "axios";
+import { SignalingManager } from "../utils/signaling-manager";
 
-export const MarketInfo = ({market}: {market: string}) => {
+export const MarketInfo = ({ market }: { market: string }) => {
     const [ticker, setTicker] = useState<Ticker | null>(null);
 
     useEffect(() => {
         async function fetchTicker() {
             try {
                 const res = await axios.get('/api/v1/tickers');
-                const data = res.data
+                const data = res.data;
                 const ticker = data.find((t: Ticker) => t.symbol === market);
                 if (!ticker) {
                     throw new Error(`No ticker found for ${market}`);
                 }
-                setTicker(ticker)
+                setTicker(ticker);
             } catch (e) {
                 setTicker(null);
             }
         }
+
         fetchTicker();
+
+        const callbackId = `TICKER-${market}`;
+        const ws = SignalingManager.getInstance();
+
+        const updateTicker = (data: Partial<Ticker>) => {
+            setTicker(prevTicker => ({
+                firstPrice: data.firstPrice ?? prevTicker?.firstPrice ?? '',
+                high: data.high ?? prevTicker?.high ?? '',
+                lastPrice: data.lastPrice ?? prevTicker?.lastPrice ?? '',
+                low: data.low ?? prevTicker?.low ?? '',
+                priceChange: data.priceChange ?? prevTicker?.priceChange ?? '',
+                priceChangePercent: data.priceChangePercent ?? prevTicker?.priceChangePercent ?? '',
+                quoteVolume: data.quoteVolume ?? prevTicker?.quoteVolume ?? '',
+                symbol: data.symbol ?? prevTicker?.symbol ?? '',
+                trades: data.trades ?? prevTicker?.trades ?? '',
+                volume: data.volume ?? prevTicker?.volume ?? '',
+            }));
+        };
+
+        ws.registerCallback("ticker", updateTicker, callbackId);
+        ws.sendMessage({ method: "SUBSCRIBE", params: [`ticker.${market}`] });
+
+        return () => {
+            ws.deRegisterCallback("ticker", callbackId);
+            ws.sendMessage({ method: "UNSUBSCRIBE", params: [`ticker.${market}`] });
+        };
     }, [market]);
 
     return (

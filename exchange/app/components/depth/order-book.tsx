@@ -3,6 +3,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { BidsTable } from "./bids-table";
 import { AsksTable } from "./asks-table";
+import { SignalingManager } from "@/app/utils/signaling-manager";
 
 export const OrderBook = ({ market }: { market: string }) => {
     const [bids, setBids] = useState<[string, string][]>();
@@ -22,15 +23,53 @@ export const OrderBook = ({ market }: { market: string }) => {
         }
 
         main();
+
+        SignalingManager.getInstance().registerCallback("depth", (data: any) => {
+            setBids((originalBids) => {
+                const bidsAfterUpdate = [...(originalBids || [])];
+
+                for (let i = 0; i < bidsAfterUpdate.length; i++) {
+                    for (let j = 0; j < data.bids.length; j++) {
+                        if (bidsAfterUpdate[i][0] === data.bids[j][0]) {
+                            bidsAfterUpdate[i][1] = data.bids[j][1];
+                            break;
+                        }
+                    }
+                }
+                return bidsAfterUpdate;
+            });
+
+            setAsks((originalAsks) => {
+                const asksAfterUpdate = [...(originalAsks || [])];
+
+                for (let i = 0; i < asksAfterUpdate.length; i++) {
+                    for (let j = 0; j < data.asks.length; j++) {
+                        if (asksAfterUpdate[i][0] === data.asks[j][0]) {
+                            asksAfterUpdate[i][1] = data.asks[j][1];
+                            break;
+                        }
+                    }
+                }
+                return asksAfterUpdate;
+            });
+        }, `DEPTH-${market}`);
+
+        SignalingManager.getInstance().sendMessage({ "method": "SUBSCRIBE", "params": [`depth.${market}`] });
+
+        return () => {
+            SignalingManager.getInstance().sendMessage({ "method": "UNSUBSCRIBE", "params": [`depth.200ms.${market}`] });
+            SignalingManager.getInstance().deRegisterCallback("depth", `DEPTH-${market}`);
+        }
+
     }, [])
 
     return (
         <div className="flex flex-col grow overflow-y-hidden">
             <div className="flex flex-col h-full grow overflow-x-hidden">
                 <BookHeader />
-                <div className="flex flex-col no-scrollbar h-full flex-1 overflow-y-auto font-sans px-2">
+                <div className="flex flex-col no-scrollbar h-full flex-1 overflow-y-auto scrollbar-hide font-sans px-2">
                     {asks && <AsksTable asks={asks} />}
-                    {price && <PriceDisplay price={price}/>}
+                    {price && <PriceDisplay price={price} />}
                     {bids && <BidsTable bids={bids} />}
                 </div>
             </div>
@@ -38,7 +77,7 @@ export const OrderBook = ({ market }: { market: string }) => {
     );
 };
 
-const PriceDisplay = ({price}: {
+const PriceDisplay = ({ price }: {
     price: string
 }) => {
     return (
@@ -61,26 +100,15 @@ const PriceDisplay = ({price}: {
 
 const BookHeader = () => {
     return (
-        <div className="flex flex-row min-w-0 gap-1 px-3 py-2">
-            <div className="flex justify-between flex-row w-2/3 min-w-0 gap-1">
-                <p className="text-high-emphasis font-medium truncate text-xs">
-                    Price
-                </p>
-                <button
-                    type="button"
-                    tabIndex={0}
-                    className="font-medium transition-opacity hover:cursor-pointer hover:opacity-80 text-med-emphasis h-auto truncate text-right text-xs"
-                >
-                    Size
-                </button>
+        <div className="flex w-full px-3 py-2 text-xs font-medium text-high-emphasis">
+            <div className="w-1/3 text-left truncate">Price</div>
+            <div className="w-1/3 text-center text-med-emphasis hover:opacity-80 hover:cursor-pointer">
+                <button type="button" tabIndex={0}>Size</button>
             </div>
-            <button
-                type="button"
-                tabIndex={0}
-                className="font-medium transition-opacity hover:cursor-pointer hover:opacity-80 text-med-emphasis h-auto w-1/3 truncate text-right text-xs"
-            >
-                Total
-            </button>
+            <div className="w-1/3 text-right text-med-emphasis hover:opacity-80 hover:cursor-pointer">
+                <button type="button" tabIndex={0}>Total</button>
+            </div>
         </div>
     );
 };
+
