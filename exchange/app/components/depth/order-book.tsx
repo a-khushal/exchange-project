@@ -13,21 +13,23 @@ export const OrderBook = ({ market }: { market: string }) => {
     useEffect(() => {
         async function main() {
             const res = await axios.get('/api/v1/tickers');
-            const data = res.data
+            const data = res.data;
             const ticker = data.find((t: Ticker) => t.symbol === market);
-            setPrice(ticker.lastPrice)
-
+            setPrice(ticker.lastPrice);
+    
             const depth = (await axios.get(`/api/v1/depth?symbol=${market}`)).data;
-            setBids(depth.bids.reverse())
+            setBids(depth.bids.reverse());
             setAsks(depth.asks);
         }
-
+    
         main();
-
-        SignalingManager.getInstance().registerCallback("depth", (data: any) => {
+    
+        const signaling = SignalingManager.getInstance();
+    
+        signaling.registerCallback("depth", (data: any) => {
             setBids((originalBids) => {
                 const bidsAfterUpdate = [...(originalBids || [])];
-
+    
                 for (let i = 0; i < bidsAfterUpdate.length; i++) {
                     for (let j = 0; j < data.bids.length; j++) {
                         if (bidsAfterUpdate[i][0] === data.bids[j][0]) {
@@ -38,10 +40,10 @@ export const OrderBook = ({ market }: { market: string }) => {
                 }
                 return bidsAfterUpdate;
             });
-
+    
             setAsks((originalAsks) => {
                 const asksAfterUpdate = [...(originalAsks || [])];
-
+    
                 for (let i = 0; i < asksAfterUpdate.length; i++) {
                     for (let j = 0; j < data.asks.length; j++) {
                         if (asksAfterUpdate[i][0] === data.asks[j][0]) {
@@ -53,16 +55,22 @@ export const OrderBook = ({ market }: { market: string }) => {
                 return asksAfterUpdate;
             });
         }, `DEPTH-${market}`);
-
-        SignalingManager.getInstance().sendMessage({ "method": "SUBSCRIBE", "params": [`depth.${market}`] });
-
+    
+        signaling.registerCallback("ticker", (data: any) => {
+            if (data.symbol === market && data.lastPrice) {
+                setPrice(data.lastPrice);
+            }
+        }, `TICKER-${market}`);
+    
+        signaling.sendMessage({ method: "SUBSCRIBE", params: [`depth.${market}`, `ticker.${market}`] });
+    
         return () => {
-            SignalingManager.getInstance().sendMessage({ "method": "UNSUBSCRIBE", "params": [`depth.200ms.${market}`] });
-            SignalingManager.getInstance().deRegisterCallback("depth", `DEPTH-${market}`);
-        }
-
-    }, [])
-
+            signaling.sendMessage({ method: "UNSUBSCRIBE", params: [`depth.200ms.${market}`, `ticker.200ms.${market}`] });
+            signaling.deRegisterCallback("depth", `DEPTH-${market}`);
+            signaling.deRegisterCallback("ticker", `TICKER-${market}`);
+        };
+    }, []);
+    
     return (
         <div className="flex flex-col grow overflow-y-hidden">
             <div className="flex flex-col h-full grow overflow-x-hidden">

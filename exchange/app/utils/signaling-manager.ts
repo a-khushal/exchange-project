@@ -18,7 +18,7 @@ export class SignalingManager {
     }
 
     public static getInstance() {
-        if (!this.instance)  {
+        if (!this.instance) {
             this.instance = new SignalingManager();
         }
         return this.instance;
@@ -50,11 +50,23 @@ export class SignalingManager {
                         }
 
                         callback(newTicker);
-                   }
-                   if (type === "depth") {
+                    }
+                    if (type === "depth") {
                         const updatedBids = message.data.b;
                         const updatedAsks = message.data.a;
                         callback({ bids: updatedBids, asks: updatedAsks });
+                    }
+
+                    if (type === "trade") {
+                        console.log('trade', message.data)
+                        const trade = {
+                            id: message.data.t,
+                            isBuyerMaker: message.data.m,
+                            price: message.data.p,
+                            quantity: message.data.q,
+                            timestamp: message.data.T,
+                        };
+                        callback([trade]);
                     }
                 });
             }
@@ -76,7 +88,6 @@ export class SignalingManager {
     async registerCallback(type: string, callback: any, id: string) {
         this.callbacks[type] = this.callbacks[type] || [];
         this.callbacks[type].push({ callback, id });
-        // "ticker" => callback
     }
 
     async deRegisterCallback(type: string, id: string) {

@@ -1,12 +1,14 @@
 "use client"
-import Appbar from "./components/appbar";
-import Market from "./components/market";
+import { Appbar } from "./components/appbar";
+import { Home } from "./components/home";
 
-export default function Home() {
+export default function Page() {
   return (
     <>
-      <div>
-        Landing page
+      <div className="min-h-full">
+        <div className="mx-auto w-full max-w-[60%]">
+          <Home />
+        </div>
       </div>
     </>
   );
