@@ -13,8 +13,8 @@ async function main() {
         if (!val) {
             return;
         }
-
-        console.log(engine.processor(JSON.parse(val)));
+        console.log(val);
+        engine.processor(JSON.parse(val));
     }
 }
 

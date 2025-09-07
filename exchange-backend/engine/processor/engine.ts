@@ -1,5 +1,5 @@
 import { CREATE_ORDER, type ApiMessageType, type Order } from "../types";
-import type { OrderBook } from "./orderbook";
+import { OrderBook } from "./orderbook";
 import { v4 as uuidv4 } from 'uuid';
 
 interface Balance {
@@ -13,6 +13,14 @@ export class Engine {
     orderbooks: OrderBook[] = [];
     balances: Map<String, Balance> = new Map();
 
+    public constructor() {
+        this.orderbooks.push(new OrderBook({
+            baseAsset: "SOL",
+            quoteAsset: "USDC"
+        }));
+        this.setBaseBalances();
+    }
+
     public processor({ client, message }: {
         client: string;
         message: ApiMessageType
@@ -21,7 +29,8 @@ export class Engine {
             case CREATE_ORDER:
                 try {
                     const result = this.createOrder(message);
-                    console.log(result);
+                    console.log("result: ", result);
+                    console.log("\n\n");
                 } catch (err: any) {
                     console.log(err)
                 }
@@ -36,8 +45,8 @@ export class Engine {
             throw new Error("no orderbook found");
         }
 
-        const baseAsset = market.split("_")[0]!;
-        const quoteAsset = market.split("_")[1]!;
+        const baseAsset = market.split("/")[0]!;
+        const quoteAsset = market.split("/")[1]!;
 
         this.checkAndLockFunds(side, price, quantity, userId, baseAsset, quoteAsset);
         const order: Order = {
@@ -51,23 +60,25 @@ export class Engine {
         const { fills, executedQty } = orderbook.match(order);
 
         return {
-            fills,
             executedQty,
-            orderId: order.orderId
+            orderId: order.orderId,
+            fills,
         }
     }
 
     private checkAndLockFunds(side: string, price: string, quantity: string, userId: string, baseAsset: string, quoteAsset: string) {
+        const balance = this.balances.get(userId);
+
+        if (!balance) {
+            throw new Error("Insufficient funds");
+        }
+    
+        const amount = Number(quantity);
+        const cost = Number(price) * amount;
+
         if (side === "buy") {
-            const balance = this.balances.get(userId);
-
-            if (!balance) {
-                throw new Error("Insufficient funds");
-            }
-
-            const cost = Number(price) * Number(quantity);
-
             const assetBalance = balance[quoteAsset];
+
             if (!assetBalance) {
                 throw new Error(`No balance for asset ${quoteAsset}`);
             }
@@ -79,25 +90,52 @@ export class Engine {
             assetBalance.available -= cost;
             assetBalance.locked += cost;
         } else if (side === 'sell') {
-            const balance = this.balances.get(userId);
-
-            if (!balance) {
-                throw new Error("Insufficient funds");
-            }
-
-            const cost = Number(price) * Number(quantity);
-
             const assetBalance = balance[baseAsset];
             if (!assetBalance) {
                 throw new Error(`No balance for asset ${baseAsset}`);
             }
 
-            if (assetBalance.available < cost) {
+            if (assetBalance.available < amount) {
                 throw new Error("Insufficient funds");
             }
 
-            assetBalance.available -= cost;
-            assetBalance.locked += cost;
+            assetBalance.available -= amount;
+            assetBalance.locked += amount;
         }
     }
-}
+
+    private setBaseBalances() {
+        const BASE_CURRENCY = "SOL";
+        const QUOTE_CURRENCY = "USDC";
+    
+        this.balances.set("007", {
+            [BASE_CURRENCY]: { available: 2, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 200, locked: 0 }
+        });
+    
+        this.balances.set("008", {
+            [BASE_CURRENCY]: { available: 2, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 300, locked: 0 }
+        });
+    
+        this.balances.set("009", {
+            [BASE_CURRENCY]: { available: 2, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 100, locked: 0 }
+        });
+    
+        this.balances.set("010", {
+            [BASE_CURRENCY]: { available: 2, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 100, locked: 0 }
+        });
+    
+        this.balances.set("011", {
+            [BASE_CURRENCY]: { available: 2, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 200, locked: 0 }
+        });
+    
+        this.balances.set("012", {
+            [BASE_CURRENCY]: { available: 2, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 100, locked: 0 }
+        });
+    }
+}    
