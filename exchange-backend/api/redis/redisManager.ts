@@ -1,5 +1,6 @@
 import { createClient, type RedisClientType } from "redis";
 import { v4 as uuidv4 } from 'uuid';
+import type { MessageType } from "../types";
 
 export class RedisManager {
     private client: RedisClientType;
@@ -21,14 +22,15 @@ export class RedisManager {
         return RedisManager.instance;
     }
 
-    public sendAndAwait(message: any) {
+    public sendAndAwait(message: MessageType) {
         return new Promise((resolve, _reject) => {
             const id = uuidv4();
-            console.log(id);
+
             this.publisher.subscribe(id, (message) => {
                 this.publisher.unsubscribe(id);
                 resolve(JSON.parse(message));
             })
+
             this.client.lPush("messages", JSON.stringify({ client: id, message }));
         })
     }
