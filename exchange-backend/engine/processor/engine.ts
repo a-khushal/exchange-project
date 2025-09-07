@@ -21,6 +21,7 @@ export class Engine {
             case CREATE_ORDER:
                 try {
                     const result = this.createOrder(message);
+                    console.log(result);
                 } catch (err: any) {
                     console.log(err)
                 }
@@ -47,11 +48,11 @@ export class Engine {
             orderId: uuidv4(),
             side
         }
-        const { fills, exectuedQty } = orderbook.match(order);
+        const { fills, executedQty } = orderbook.match(order);
 
         return {
             fills,
-            exectuedQty,
+            executedQty,
             orderId: order.orderId
         }
     }

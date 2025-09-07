@@ -19,3 +19,11 @@ export interface Order {
     filled: number;
     side: 'sell' | 'buy';
 }
+
+export interface Fill {
+    price: number;
+    quantity: number;
+    tradeId: number;
+    markerOrderId: string;
+    otherUserId: string;
+}
