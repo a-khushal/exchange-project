@@ -1,4 +1,4 @@
-import { CREATE_ORDER, type ApiMessageType, type Order } from "../types";
+import { CREATE_ORDER, type ApiMessageType, type Fill, type Order } from "../types";
 import { OrderBook } from "./orderbook";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -58,6 +58,7 @@ export class Engine {
             side
         }
         const { fills, executedQty } = orderbook.match(order);
+        this.updateBalance(userId, quoteAsset, baseAsset, fills, side);
 
         return {
             executedQty,
@@ -72,7 +73,7 @@ export class Engine {
         if (!balance) {
             throw new Error("Insufficient funds");
         }
-    
+
         const amount = Number(quantity);
         const cost = Number(price) * amount;
 
@@ -104,35 +105,77 @@ export class Engine {
         }
     }
 
+    private updateBalance(userId: string, quoteAsset: string, baseAsset: string, fills: Fill[], side: "buy" | "sell") {
+        if (side == "buy") {
+            fills.forEach(fill => {
+                const seller = this.balances.get(fill.otherUserId);
+                const buyer = this.balances.get(userId);
+
+                if (!seller || !buyer) {
+                    return;
+                }
+
+                if (seller.quoteAsset && seller.baseAsset) {
+                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (fill.quantity * fill.price);
+                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - fill.quantity;
+                }
+
+                if (buyer.quoteAsset && buyer.baseAsset) {
+                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (fill.quantity * fill.price);
+                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + fill.quantity;
+                }
+            });
+        } else if (side == 'sell') {
+            fills.forEach(fill => {
+                const buyer = this.balances.get(fill.otherUserId);
+                const seller = this.balances.get(userId);
+
+                if (!buyer || !seller) {
+                    return;
+                }
+
+                if (buyer.quoteAsset && buyer.baseAsset) {
+                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (fill.quantity * fill.price);
+                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + fill.quantity;
+                }
+
+                if (seller.quoteAsset && seller.baseAsset) {
+                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (fill.quantity * fill.price);
+                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - fill.quantity;
+                }
+            });
+        }
+    }
+
     private setBaseBalances() {
         const BASE_CURRENCY = "SOL";
         const QUOTE_CURRENCY = "USDC";
-    
+
         this.balances.set("007", {
             [BASE_CURRENCY]: { available: 2, locked: 0 },
             [QUOTE_CURRENCY]: { available: 200, locked: 0 }
         });
-    
+
         this.balances.set("008", {
             [BASE_CURRENCY]: { available: 2, locked: 0 },
             [QUOTE_CURRENCY]: { available: 300, locked: 0 }
         });
-    
+
         this.balances.set("009", {
             [BASE_CURRENCY]: { available: 2, locked: 0 },
             [QUOTE_CURRENCY]: { available: 100, locked: 0 }
         });
-    
+
         this.balances.set("010", {
             [BASE_CURRENCY]: { available: 2, locked: 0 },
             [QUOTE_CURRENCY]: { available: 100, locked: 0 }
         });
-    
+
         this.balances.set("011", {
             [BASE_CURRENCY]: { available: 2, locked: 0 },
             [QUOTE_CURRENCY]: { available: 200, locked: 0 }
         });
-    
+
         this.balances.set("012", {
             [BASE_CURRENCY]: { available: 2, locked: 0 },
             [QUOTE_CURRENCY]: { available: 100, locked: 0 }

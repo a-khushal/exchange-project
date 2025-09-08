@@ -26,6 +26,16 @@ export class OrderBook {
         return [this.baseAsset, this.quoteAsset].join("/");
     }
 
+    public get getSnapshot() {
+        return {
+            baseAsset: this.baseAsset,
+            bids: this.bids,
+            asks: this.asks,
+            lastTradeId: this.lastTradeId,
+            currentPrice: this.currentPrice
+        }
+    }
+
     public match(order: Order): {
         executedQty: number,
         fills: Fill[]
@@ -43,7 +53,7 @@ export class OrderBook {
 
             return {
                 executedQty,
-                fills 
+                fills
             };
         } else if (order.side === "sell") {
             const { fills, executedQty } = this.matchAsk(order);
@@ -57,8 +67,8 @@ export class OrderBook {
             console.log("bids: ", this.bids);
 
             return {
-                executedQty, 
-                fills 
+                executedQty,
+                fills
             };
         }
 
@@ -150,4 +160,35 @@ export class OrderBook {
 
         return { fills, executedQty };
     }
+
+    public getOpenOrders(userId: string) {
+        const bids = this.bids.filter(b => b.userId === userId);
+        const asks = this.asks.filter(a => a.userId === userId);
+
+        return [...bids, ...asks];
+    }
+
+    public cancelBid(order: Order) {
+        const index = this.bids.findIndex(x => x.orderId === order.orderId);
+
+        if (index !== -1) {
+            const bid = this.bids[index];
+            this.bids.splice(index, 1);
+            return bid?.price;
+        }
+
+        return undefined;
+    }
+
+    public cancelAsk(order: Order) {
+        const index = this.asks.findIndex(x => x.orderId === order.orderId);
+    
+        if (index !== -1) {
+            const ask = this.asks[index];
+            this.asks.splice(index, 1);
+            return ask?.price;
+        }
+    
+        return undefined;
+    }    
 }
