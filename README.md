@@ -1,9 +1,41 @@
-# Exchange Project
+## Exchange Project
 
-This project is a full-stack cryptocurrency trading platform that combines a real-time order book backend with a modern trading frontend.
+Real-time crypto trading stack: matching engine, HTTP API, and a Next.js UI.
 
-- **exchange/**: A Next.js frontend application providing a trading interface, live market data, interactive charts, and order management. It features custom components for market info, order book depth, and integrates with backend APIs for tickers, klines, and depth data.
+### Structure
 
-- **order-book/**: A TypeScript backend service implementing the core order book and matching engine logic. It handles order placement, matching, and trade execution for supported trading pairs.
+- `exchange-backend/`
+  - `api/`: Bun + Express API (port 3000)
+  - `engine/`: Bun matching engine (uses Redis)
+- `exchange-proxy/`: Next.js frontend
+- `order-book/`: TypeScript order book library
 
-Each folder contains its own setup and run instructions.
+### Requirements
+
+- Bun, Node.js 18+, Redis
+
+### Run
+
+API
+```bash
+cd exchange-backend/api && bun install && bun dev
+```
+
+Engine
+```bash
+cd exchange-backend/engine && bun install && bun dev
+```
+
+Frontend
+```bash
+cd exchange-proxy && npm install && npm run dev
+```
+
+### Frontend API target
+
+- Set `PROXY_URL` in `exchange-proxy/app/utils/constants.ts` (e.g. `http://localhost:3000/api/v1`).
+
+### Routes
+
+- `POST /api/v1/order`
+- `GET /api/v1/depth`
