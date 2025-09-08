@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { RedisManager } from "../redis/redisManager";
-import { CREATE_ORDER, type ApiResponseType, type MessageType } from "../types";
+import { CREATE_ORDER, GET_OPEN_ORDERS, type ApiResponseType } from "../types";
 
 export const orderRouter = Router();
 
@@ -20,3 +20,15 @@ orderRouter.post("/", async (req, res) => {
 
     return res.json(result.payload)
 })
+
+orderRouter.get("/open", async (req, res) => {
+    const response: ApiResponseType = await RedisManager.getInstance().sendAndAwait({
+        type: GET_OPEN_ORDERS,
+        data: {
+            userId: req.query.userId as string,
+            market: req.query.market as string
+        }
+    });
+
+    res.json(response.payload);
+});

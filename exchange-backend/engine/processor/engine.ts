@@ -89,6 +89,9 @@ export class Engine {
                         }
                     });
                 }
+                break;
+            default: 
+                throw new Error('wrong message type')
         }
     }
 
