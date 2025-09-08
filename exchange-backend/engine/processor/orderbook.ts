@@ -161,6 +161,32 @@ export class OrderBook {
         return { fills, executedQty };
     }
 
+    public getDepth() {
+        const bids: [string, string][] = [];
+        const asks: [string, string][] = [];
+
+        const bidsMap = new Map<string, number>();
+        const asksMap = new Map<string, number>();
+
+        this.bids.forEach(bid => {
+            const priceKey = bid.price.toString();
+            bidsMap.set(priceKey, (bidsMap.get(priceKey) ?? 0) + bid.quantity);
+        });
+
+        this.asks.forEach(ask => {
+            const priceKey = ask.price.toString();
+            asksMap.set(priceKey, (asksMap.get(priceKey) ?? 0) + ask.quantity);
+        });
+
+        bidsMap.forEach((qty, price) => bids.push([price, qty.toString()]));
+        asksMap.forEach((qty, price) => asks.push([price, qty.toString()]));
+
+        bids.sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
+        asks.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+
+        return { bids, asks };
+    }
+
     public getOpenOrders(userId: string) {
         const bids = this.bids.filter(b => b.userId === userId);
         const asks = this.asks.filter(a => a.userId === userId);
@@ -182,13 +208,13 @@ export class OrderBook {
 
     public cancelAsk(order: Order) {
         const index = this.asks.findIndex(x => x.orderId === order.orderId);
-    
+
         if (index !== -1) {
             const ask = this.asks[index];
             this.asks.splice(index, 1);
             return ask?.price;
         }
-    
+
         return undefined;
-    }    
+    }
 }

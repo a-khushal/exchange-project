@@ -1,17 +1,10 @@
 export const CREATE_ORDER = 'CREATE_ORDER'
 export const ORDER_PLACED = 'ORDER_PLACED'
 export const ORDER_CANCELED = 'ORDER_CANCELED'
-
-export type ApiMessageType = {
-    type: typeof CREATE_ORDER,
-    data: {
-        market: string,
-        price: string,
-        quantity: string,
-        side: 'buy' | 'sell'
-        userId: string,
-    }
-}
+export const GET_OPEN_ORDERS = 'GET_OPEN_ORDERS'
+export const OPEN_ORDERS = 'OPEN_ORDERS'
+export const DEPTH = 'DEPTH'
+export const GET_DEPTH = 'GET_DEPTH'
 
 export interface Order {
     price: number;
@@ -30,6 +23,28 @@ export interface Fill {
     otherUserId: string;
 }
 
+export type ApiMessageType = {
+    type: typeof CREATE_ORDER,
+    data: {
+        market: string,
+        price: string,
+        quantity: string,
+        side: 'buy' | 'sell'
+        userId: string,
+    }
+} | {
+    type: typeof GET_OPEN_ORDERS,
+    data: {
+        market: string,
+        userId: string,
+    }
+} | {
+    type: typeof GET_DEPTH,
+    data: {
+        market: string,
+    }
+}
+
 export type ApiResponseType = {
     type: typeof ORDER_PLACED,
     payload: {
@@ -43,5 +58,14 @@ export type ApiResponseType = {
         orderId: string,
         executedQty: number,
         remainingQty: number
+    }
+} | {
+    type: typeof OPEN_ORDERS,
+    payload: Order[]
+} | {
+    type: typeof DEPTH,
+    payload: {
+        bids: [string, string][],
+        asks: [string, string][]
     }
 }

@@ -1,4 +1,4 @@
-import { CREATE_ORDER, ORDER_PLACED, ORDER_CANCELED, type ApiMessageType, type Fill, type Order } from "../types";
+import { CREATE_ORDER, ORDER_PLACED, ORDER_CANCELED, GET_OPEN_ORDERS, OPEN_ORDERS, GET_DEPTH, DEPTH, type ApiMessageType, type Fill, type Order } from "../types";
 import { OrderBook } from "./orderbook";
 import { v4 as uuidv4 } from 'uuid';
 import { RedisManager } from "../redis/redisManager";
@@ -29,7 +29,7 @@ export class Engine {
         switch (message.type) {
             case CREATE_ORDER:
                 try {
-                    const result = this.createOrder(message);
+                    const result = this.createOrder(message.data.market, message.data.price, message.data.quantity, message.data.side, message.data.userId);
                     console.log(`result: ${result}\n\n`);
 
                     RedisManager.getInstance().sendToApi(client, {
@@ -52,11 +52,47 @@ export class Engine {
                     });
                 }
                 break;
+            case GET_OPEN_ORDERS:
+                try {
+                    const book = this.orderbooks.find(o => o.market === message.data.market);
+                    if (!book) {
+                        throw new Error("No order book found");
+                    }
+
+                    const openOrders = book.getOpenOrders(message.data.userId);
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: OPEN_ORDERS,
+                        payload: openOrders
+                    })
+                } catch (e) {
+                    console.log(e);
+                }
+                break;
+            case GET_DEPTH:
+                try {
+                    const market = message.data.market;
+                    const orderbook = this.orderbooks.find(o => o.market === market);
+                    if (!orderbook) {
+                        throw new Error("No orderbook found");
+                    }
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: DEPTH,
+                        payload: orderbook.getDepth()
+                    });
+                } catch (e) {
+                    console.log(e);
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: DEPTH,
+                        payload: {
+                            bids: [],
+                            asks: []
+                        }
+                    });
+                }
         }
     }
 
-    private createOrder(message: ApiMessageType) {
-        const { market, quantity, price, userId, side } = message.data;
+    private createOrder(market: string, price: string, quantity: string, side: "buy" | "sell", userId: string) {
         const orderbook = this.orderbooks.find(o => o.market === market);
 
         if (!orderbook) {
