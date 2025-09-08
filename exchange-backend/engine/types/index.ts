@@ -1,4 +1,6 @@
-export const CREATE_ORDER = "CREATE_ORDER"
+export const CREATE_ORDER = 'CREATE_ORDER'
+export const ORDER_PLACED = 'ORDER_PLACED'
+export const ORDER_CANCELED = 'ORDER_CANCELED'
 
 export type ApiMessageType = {
     type: typeof CREATE_ORDER,
@@ -26,4 +28,20 @@ export interface Fill {
     tradeId: number;
     markerOrderId: string;
     otherUserId: string;
+}
+
+export type ApiResponseType = {
+    type: typeof ORDER_PLACED,
+    payload: {
+        orderId: string,
+        executedQty: number,
+        fills: Fill[]
+    };
+} | {
+    type: typeof ORDER_CANCELED;
+    payload: {
+        orderId: string,
+        executedQty: number,
+        remainingQty: number
+    }
 }

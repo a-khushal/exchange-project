@@ -1,6 +1,7 @@
-import { CREATE_ORDER, type ApiMessageType, type Fill, type Order } from "../types";
+import { CREATE_ORDER, ORDER_PLACED, ORDER_CANCELED, type ApiMessageType, type Fill, type Order } from "../types";
 import { OrderBook } from "./orderbook";
 import { v4 as uuidv4 } from 'uuid';
+import { RedisManager } from "../redis/redisManager";
 
 interface Balance {
     [key: string]: {
@@ -29,11 +30,28 @@ export class Engine {
             case CREATE_ORDER:
                 try {
                     const result = this.createOrder(message);
-                    console.log("result: ", result);
-                    console.log("\n\n");
-                } catch (err: any) {
-                    console.log(err)
+                    console.log(`result: ${result}\n\n`);
+
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: ORDER_PLACED,
+                        payload: {
+                            orderId: result.orderId,
+                            executedQty: result.executedQty,
+                            fills: result.fills
+                        }
+                    })
+                } catch (e) {
+                    console.log(e);
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: ORDER_CANCELED,
+                        payload: {
+                            orderId: "",
+                            executedQty: 0,
+                            remainingQty: 0
+                        }
+                    });
                 }
+                break;
         }
     }
 
