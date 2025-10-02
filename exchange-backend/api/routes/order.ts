@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { RedisManager } from "../redis/redisManager";
-import { CREATE_ORDER, GET_OPEN_ORDERS, type ApiResponseType } from "../types";
+import { CANCEL_ORDER, CREATE_ORDER, GET_OPEN_ORDERS, type ApiResponseType } from "../types";
 
 export const orderRouter = Router();
 
@@ -30,5 +30,17 @@ orderRouter.get("/open", async (req, res) => {
         }
     });
 
+    res.json(response.payload);
+});
+
+orderRouter.delete("/", async (req, res) => {
+    const { orderId, market } = req.body;
+    const response: ApiResponseType = await RedisManager.getInstance().sendAndAwait({
+        type: CANCEL_ORDER,
+        data: {
+            orderId,
+            market
+        }
+    });
     res.json(response.payload);
 });

@@ -5,6 +5,7 @@ export const GET_OPEN_ORDERS = 'GET_OPEN_ORDERS'
 export const OPEN_ORDERS = 'OPEN_ORDERS'
 export const DEPTH = 'DEPTH'
 export const GET_DEPTH = 'GET_DEPTH'
+export const CANCEL_ORDER = 'CANCEL_ORDER'
 
 export interface Fill {
     price: number;
@@ -43,7 +44,14 @@ export type MessageType = {
     data: {
         market: string,
     }
+} | {
+    type: typeof CANCEL_ORDER;
+    data: {
+        orderId: string,
+        market: string,
+    }
 }
+
 
 export type ApiResponseType = {
     type: typeof ORDER_PLACED;
