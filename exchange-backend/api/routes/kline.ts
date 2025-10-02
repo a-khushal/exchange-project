@@ -1,6 +1,5 @@
 import { Client } from 'pg';
 import { Router } from "express";
-import { RedisManager } from "../redis/redisManager";
 
 const pgClient = new Client({
     user: 'your_user',
