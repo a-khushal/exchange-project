@@ -42,9 +42,9 @@ export class OrderBook {
     } {
         if (order.side === "buy") {
             const { fills, executedQty } = this.matchBid(order);
-            order.filled = executedQty;
+            order.filled = executedQty.toString();
 
-            if (executedQty < order.quantity) {
+            if (Number(executedQty) < Number(order.quantity)) {
                 this.bids.push(order);
             }
 
@@ -57,9 +57,9 @@ export class OrderBook {
             };
         } else if (order.side === "sell") {
             const { fills, executedQty } = this.matchAsk(order);
-            order.filled = executedQty;
+            order.filled = executedQty.toString();
 
-            if (executedQty < order.quantity) {
+            if (Number(executedQty) < Number(order.quantity)) {
                 this.asks.push(order);
             }
 
@@ -79,7 +79,7 @@ export class OrderBook {
         fills: Fill[],
         executedQty: number
     } {
-        this.asks.sort((a, b) => a.price - b.price);
+        this.asks.sort((a, b) => Number(a.price) - Number(b.price));
         let executedQty = 0;
         const fills: Fill[] = [];
 
@@ -88,13 +88,13 @@ export class OrderBook {
                 continue;
             }
 
-            if (executedQty >= order.quantity) {
+            if (Number(executedQty) >= Number(order.quantity)) {
                 break;
             }
 
-            if (ask.price <= order.price) {
-                const remainingOrderQty = order.quantity - executedQty;
-                const remainingAskQty = ask.quantity - ask.filled;
+            if (Number(ask.price) <= Number(order.price)) {
+                const remainingOrderQty = Number(order.quantity) - Number(executedQty);
+                const remainingAskQty = Number(ask.quantity) - Number(ask.filled);
                 if (remainingAskQty <= 0) {
                     continue;
                 }
@@ -105,7 +105,7 @@ export class OrderBook {
 
                 fills.push({
                     price: ask.price,
-                    quantity: filledQty,
+                    quantity: filledQty.toString(),
                     tradeId: ++this.lastTradeId,
                     markerOrderId: ask.orderId,
                     otherUserId: ask.userId,
@@ -122,7 +122,7 @@ export class OrderBook {
         fills: Fill[],
         executedQty: number
     } {
-        this.bids.sort((a, b) => b.price - a.price);
+        this.bids.sort((a, b) => Number(b.price) - Number(a.price));
         let executedQty = 0;
         const fills: Fill[] = [];
 
@@ -131,13 +131,13 @@ export class OrderBook {
                 continue;
             }
 
-            if (executedQty >= order.quantity) {
+            if (Number(executedQty) >= Number(order.quantity)) {
                 break;
             }
 
-            if (bid.price >= order.price) {
-                const remainingOrderQty = order.quantity - executedQty;
-                const remainingBidQty = bid.quantity - bid.filled;
+            if (Number(bid.price) >= Number(order.price)) {
+                const remainingOrderQty = Number(order.quantity) - Number(executedQty);
+                const remainingBidQty = Number(bid.quantity) - Number(bid.filled);
                 if (remainingBidQty <= 0) {
                     continue;
                 }
@@ -148,7 +148,7 @@ export class OrderBook {
 
                 fills.push({
                     price: bid.price,
-                    quantity: filledQty,
+                    quantity: filledQty.toString(),
                     tradeId: ++this.lastTradeId,
                     markerOrderId: bid.orderId,
                     otherUserId: bid.userId,
@@ -170,12 +170,12 @@ export class OrderBook {
 
         this.bids.forEach(bid => {
             const priceKey = bid.price.toString();
-            bidsMap.set(priceKey, (bidsMap.get(priceKey) ?? 0) + bid.quantity);
+            bidsMap.set(priceKey, (bidsMap.get(priceKey) ?? 0) + Number(bid.quantity));
         });
 
         this.asks.forEach(ask => {
             const priceKey = ask.price.toString();
-            asksMap.set(priceKey, (asksMap.get(priceKey) ?? 0) + ask.quantity);
+            asksMap.set(priceKey, (asksMap.get(priceKey) ?? 0) + Number(ask.quantity));
         });
 
         bidsMap.forEach((qty, price) => bids.push([price, qty.toString()]));

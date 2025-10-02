@@ -8,19 +8,21 @@ export const GET_DEPTH = 'GET_DEPTH'
 export const ON_RAMP = 'ON_RAMP'
 export const BASE_CURRENCY = 'USCD'
 export const CANCEL_ORDER = 'CANCEL_ORDER'
+export const TRADE_ADDED = 'TRADE_ADDED'
+export const ORDER_UPDATE = 'ORDER_UPDATE'
 
 export interface Order {
-    price: number;
-    quantity: number;
+    price: string;
+    quantity: string;
     userId: string;
     orderId: string;
-    filled: number;
+    filled: string;
     side: 'sell' | 'buy';
 }
 
 export interface Fill {
-    price: number;
-    quantity: number;
+    price: string;
+    quantity: string;
     tradeId: number;
     markerOrderId: string;
     otherUserId: string;
@@ -121,3 +123,27 @@ export type TradeAddedMessage = {
 }
 
 export type WsMessage = TickerUpdateMessage | DepthUpdateMessage | TradeAddedMessage;
+
+
+export type DbMessage = {
+    type: typeof TRADE_ADDED,
+    data: {
+        id: string,
+        isBuyerMaker: boolean,
+        price: string,
+        quantity: string,
+        quoteQuantity: string,
+        timestamp: number,
+        market: string
+    }
+} | {
+    type: typeof ORDER_UPDATE,
+    data: {
+        orderId: string,
+        executedQty: number,
+        market?: string,
+        price?: string,
+        quantity?: string,
+        side?: "buy" | "sell",
+    }
+}

@@ -9,6 +9,8 @@ import {
     BASE_CURRENCY,
     ON_RAMP,
     CANCEL_ORDER,
+    TRADE_ADDED,
+    ORDER_UPDATE,
     type ApiMessageType,
     type Fill,
     type Order,
@@ -138,7 +140,7 @@ export class Engine {
 
                     if (order.side === "buy") {
                         const price = cancelOrderbook.cancelBid(order);
-                        const leftQuantity = (order.quantity - order.filled) * order.price;
+                        const leftQuantity = (Number(order.quantity) - Number(order.filled)) * Number(order.price);
 
                         const userBalances = this.balances.get(order.userId);
                         if (!userBalances) {
@@ -158,7 +160,7 @@ export class Engine {
                         }
                     } else {
                         const price = cancelOrderbook.cancelAsk(order);
-                        const leftQuantity = order.quantity - order.filled;
+                        const leftQuantity = Number(order.quantity) - Number(order.filled);
 
                         const userBalances = this.balances.get(order.userId);
                         if (!userBalances) {
@@ -198,15 +200,20 @@ export class Engine {
 
         this.checkAndLockFunds(side, price, quantity, userId, baseAsset, quoteAsset);
         const order: Order = {
-            price: Number(price),
-            quantity: Number(quantity),
-            filled: 0,
+            price: price,
+            quantity: quantity,
+            filled: "0",
             userId,
             orderId: uuidv4(),
             side
         }
         const { fills, executedQty } = orderbook.match(order);
         this.updateBalance(userId, quoteAsset, baseAsset, fills, side);
+
+        this.createDbTrades(fills, market, userId);
+        this.updateDbOrders(order, executedQty, fills, market);
+        this.publisWsDepthUpdates(fills, price, side, market);
+        this.publishWsTrades(fills, userId, market);
 
         return {
             executedQty,
@@ -274,6 +281,97 @@ export class Engine {
         });
     }
 
+    createDbTrades(fills: Fill[], market: string, userId: string) {
+        fills.forEach(fill => {
+            RedisManager.getInstance().pushMessage({
+                type: TRADE_ADDED,
+                data: {
+                    market: market,
+                    id: fill.tradeId.toString(),
+                    isBuyerMaker: fill.otherUserId === userId, // TODO: Is this right?
+                    price: fill.price.toString(),
+                    quantity: fill.quantity.toString(),
+                    quoteQuantity: (Number(fill.quantity) * Number(fill.price)).toString(),
+                    timestamp: Date.now()
+                }
+            });
+        });
+    }
+
+    updateDbOrders(order: Order, executedQty: number, fills: Fill[], market: string) {
+        RedisManager.getInstance().pushMessage({
+            type: ORDER_UPDATE,
+            data: {
+                orderId: order.orderId,
+                executedQty: executedQty,
+                market: market,
+                price: order.price.toString(),
+                quantity: order.quantity.toString(),
+                side: order.side,
+            }
+        });
+
+        fills.forEach(fill => {
+            RedisManager.getInstance().pushMessage({
+                type: ORDER_UPDATE,
+                data: {
+                    orderId: fill.markerOrderId,
+                    executedQty: Number(fill.quantity)
+                }
+            });
+        });
+    }
+
+    publisWsDepthUpdates(fills: Fill[], price: string, side: "buy" | "sell", market: string) {
+        const orderbook = this.orderbooks.find(o => o.market === market);
+        if (!orderbook) {
+            return;
+        }
+        const depth = orderbook.getDepth();
+        if (side === "buy") {
+            const updatedAsks = depth?.asks.filter(x => fills.map(f => f.price).includes(x[0]));
+            const updatedBid = depth?.bids.find(x => x[0] === price);
+            console.log("publish ws depth updates")
+            RedisManager.getInstance().publishMessage(`depth@${market}`, {
+                stream: `depth@${market}`,
+                data: {
+                    a: updatedAsks,
+                    b: updatedBid ? [updatedBid] : [],
+                    e: "depth"
+                }
+            });
+        }
+        if (side === "sell") {
+            const updatedBids = depth?.bids.filter(x => fills.map(f => f.price).includes(x[0]));
+            const updatedAsk = depth?.asks.find(x => x[0] === price);
+            console.log("publish ws depth updates")
+            RedisManager.getInstance().publishMessage(`depth@${market}`, {
+                stream: `depth@${market}`,
+                data: {
+                    a: updatedAsk ? [updatedAsk] : [],
+                    b: updatedBids,
+                    e: "depth"
+                }
+            });
+        }
+    }
+
+    publishWsTrades(fills: Fill[], userId: string, market: string) {
+        fills.forEach(fill => {
+            RedisManager.getInstance().publishMessage(`trade@${market}`, {
+                stream: `trade@${market}`,
+                data: {
+                    e: "trade",
+                    t: fill.tradeId,
+                    m: fill.otherUserId === userId, // TODO: Is this right?
+                    p: fill.price.toString(),
+                    q: fill.quantity.toString(),
+                    s: market,
+                }
+            });
+        });
+    }
+
     private updateBalance(userId: string, quoteAsset: string, baseAsset: string, fills: Fill[], side: "buy" | "sell") {
         if (side == "buy") {
             fills.forEach(fill => {
@@ -285,13 +383,13 @@ export class Engine {
                 }
 
                 if (seller.quoteAsset && seller.baseAsset) {
-                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (fill.quantity * fill.price);
-                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - fill.quantity;
+                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (Number(fill.quantity) * Number(fill.price));
+                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - Number(fill.quantity);
                 }
 
                 if (buyer.quoteAsset && buyer.baseAsset) {
-                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (fill.quantity * fill.price);
-                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + fill.quantity;
+                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (Number(fill.quantity) * Number(fill.price));
+                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + Number(fill.quantity);
                 }
             });
         } else if (side == 'sell') {
@@ -304,13 +402,13 @@ export class Engine {
                 }
 
                 if (buyer.quoteAsset && buyer.baseAsset) {
-                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (fill.quantity * fill.price);
-                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + fill.quantity;
+                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (Number(fill.quantity) * Number(fill.price));
+                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + Number(fill.quantity);
                 }
 
                 if (seller.quoteAsset && seller.baseAsset) {
-                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (fill.quantity * fill.price);
-                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - fill.quantity;
+                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (Number(fill.quantity) * Number(fill.price));
+                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - Number(fill.quantity);
                 }
             });
         }
