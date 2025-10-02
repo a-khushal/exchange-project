@@ -8,7 +8,7 @@ import {
     DEPTH,
     BASE_CURRENCY,
     ON_RAMP,
-
+    CANCEL_ORDER,
     type ApiMessageType,
     type Fill,
     type Order,
@@ -36,6 +36,10 @@ export class Engine {
             quoteAsset: "USDC"
         }));
         this.setBaseBalances();
+    }
+
+    public addOrderbook(orderbook: OrderBook) {
+        this.orderbooks.push(orderbook);
     }
 
     public processor({ client, message }: {
@@ -111,6 +115,72 @@ export class Engine {
                 const amount = Number(message.data.amount);
                 this.onRamp(userId, amount);
                 break;
+            case CANCEL_ORDER:
+                try {
+                    const cancelMarket = message.data.market;
+                    const orderId = message.data.orderId;
+                    const cancelOrderbook = this.orderbooks.find(o => o.market === cancelMarket);
+                    if (!cancelOrderbook) {
+                        throw new Error("No orderbook found");
+                    }
+                    const quoteAsset = cancelMarket.split("_")[1];
+                    const baseAsset = cancelMarket.split("_")[0];
+
+                    if (!quoteAsset || !baseAsset) {
+                        throw new Error("Invalid market");
+                    }
+
+                    const order = cancelOrderbook.asks.find(o => o.orderId === orderId) || cancelOrderbook.bids.find(o => o.orderId === orderId);
+                    if (!order) {
+                        console.log("No order found");
+                        throw new Error("No order found");
+                    }
+
+                    if (order.side === "buy") {
+                        const price = cancelOrderbook.cancelBid(order);
+                        const leftQuantity = (order.quantity - order.filled) * order.price;
+
+                        const userBalances = this.balances.get(order.userId);
+                        if (!userBalances) {
+                            throw new Error(`No balances found for user ${order.userId}`);
+                        }
+
+                        const assetBalance = userBalances[quoteAsset];
+                        if (!assetBalance) {
+                            throw new Error(`No balance for asset ${quoteAsset}`);
+                        }
+
+                        assetBalance.locked -= leftQuantity;
+                        assetBalance.available += leftQuantity;
+
+                        if (price) {
+                            this.sendUpdatedDepthAt(price.toString(), cancelMarket);
+                        }
+                    } else {
+                        const price = cancelOrderbook.cancelAsk(order);
+                        const leftQuantity = order.quantity - order.filled;
+
+                        const userBalances = this.balances.get(order.userId);
+                        if (!userBalances) {
+                            throw new Error(`No balances found for user ${order.userId}`);
+                        }
+
+                        const assetBalance = userBalances[baseAsset];
+                        if (!assetBalance) {
+                            throw new Error(`No balance for asset ${baseAsset}`);
+                        }
+
+                        assetBalance.locked -= leftQuantity;
+                        assetBalance.available += leftQuantity;
+
+                        if (price) {
+                            this.sendUpdatedDepthAt(price.toString(), cancelMarket);
+                        }
+                    }
+                } catch (e) {
+                    console.log(e);
+                }
+                break;
             default:
                 throw new Error('wrong message type')
         }
@@ -183,6 +253,27 @@ export class Engine {
         }
     }
 
+    sendUpdatedDepthAt(price: string, market: string) {
+        const orderbook = this.orderbooks.find(o => o.market === market);
+
+        if (!orderbook) {
+            return;
+        }
+
+        const depth = orderbook.getDepth();
+        const updatedBids = depth?.bids.filter(x => x[0] === price);
+        const updatedAsks = depth?.asks.filter(x => x[0] === price);
+
+        RedisManager.getInstance().publishMessage(`depth@${market}`, {
+            stream: `depth@${market}`,
+            data: {
+                a: updatedAsks.length ? updatedAsks : [[price, "0"]],
+                b: updatedBids.length ? updatedBids : [[price, "0"]],
+                e: "depth"
+            }
+        });
+    }
+
     private updateBalance(userId: string, quoteAsset: string, baseAsset: string, fills: Fill[], side: "buy" | "sell") {
         if (side == "buy") {
             fills.forEach(fill => {
@@ -225,7 +316,7 @@ export class Engine {
         }
     }
 
-    onRamp(userId: string, amount: number) {
+    public onRamp(userId: string, amount: number) {
         const userBalance = this.balances.get(userId) || {} as UserBalances;
 
         if (!userBalance[BASE_CURRENCY]) {

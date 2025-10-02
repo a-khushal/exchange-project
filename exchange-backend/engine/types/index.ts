@@ -7,6 +7,7 @@ export const DEPTH = 'DEPTH'
 export const GET_DEPTH = 'GET_DEPTH'
 export const ON_RAMP = 'ON_RAMP'
 export const BASE_CURRENCY = 'USCD'
+export const CANCEL_ORDER = 'CANCEL_ORDER'
 
 export interface Order {
     price: number;
@@ -51,6 +52,12 @@ export type ApiMessageType = {
         userId: string,
         amount: string
     }
+} | {
+    type: typeof CANCEL_ORDER,
+    data: {
+        market: string,
+        orderId: string,
+    }
 }
 
 export type ApiResponseType = {
@@ -77,3 +84,40 @@ export type ApiResponseType = {
         asks: [string, string][]
     }
 }
+
+export type TickerUpdateMessage = {
+    stream: string,
+    data: {
+        c?: string,
+        h?: string,
+        l?: string,
+        v?: string,
+        V?: string,
+        s?: string,
+        id: number,
+        e: "ticker"
+    }
+}
+
+export type DepthUpdateMessage = {
+    stream: string,
+    data: {
+        b?: [string, string][],
+        a?: [string, string][],
+        e: "depth"
+    }
+}
+
+export type TradeAddedMessage = {
+    stream: string,
+    data: {
+        t: number,
+        m: boolean,
+        p: string,
+        q: string,
+        s: string, // symbol
+        e: "trade",
+    }
+}
+
+export type WsMessage = TickerUpdateMessage | DepthUpdateMessage | TradeAddedMessage;

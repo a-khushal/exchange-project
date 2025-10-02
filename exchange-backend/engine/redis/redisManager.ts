@@ -1,13 +1,13 @@
 import { createClient, type RedisClientType } from "redis";
-import type { ApiResponseType } from "../types";
+import type { ApiResponseType, WsMessage } from "../types";
 
 export class RedisManager {
     public static instance: RedisManager;
-    private publisher: RedisClientType;
+    private client: RedisClientType;
 
     private constructor() {
-        this.publisher = createClient();
-        this.publisher.connect();
+        this.client = createClient();
+        this.client.connect();
     }
 
     public static getInstance(): RedisManager {
@@ -19,10 +19,10 @@ export class RedisManager {
     }
 
     public sendToApi(client: string, message: ApiResponseType) {
-        this.publisher.publish(client, JSON.stringify(message));
+        this.client.publish(client, JSON.stringify(message));
     }
 
-    // public publishMessage(channel: string, message: WsMessage) {
-    //     this.client.publish(channel, JSON.stringify(message));
-    // }
+    public publishMessage(channel: string, message: WsMessage) {
+        this.client.publish(channel, JSON.stringify(message));
+    }
 }
