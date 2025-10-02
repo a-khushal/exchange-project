@@ -21,4 +21,8 @@ export class RedisManager {
     public sendToApi(client: string, message: ApiResponseType) {
         this.publisher.publish(client, JSON.stringify(message));
     }
+
+    // public publishMessage(channel: string, message: WsMessage) {
+    //     this.client.publish(channel, JSON.stringify(message));
+    // }
 }

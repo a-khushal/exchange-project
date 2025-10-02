@@ -5,6 +5,8 @@ export const GET_OPEN_ORDERS = 'GET_OPEN_ORDERS'
 export const OPEN_ORDERS = 'OPEN_ORDERS'
 export const DEPTH = 'DEPTH'
 export const GET_DEPTH = 'GET_DEPTH'
+export const ON_RAMP = 'ON_RAMP'
+export const BASE_CURRENCY = 'USCD'
 
 export interface Order {
     price: number;
@@ -42,6 +44,12 @@ export type ApiMessageType = {
     type: typeof GET_DEPTH,
     data: {
         market: string,
+    }
+} | {
+    type: typeof ON_RAMP,
+    data: {
+        userId: string,
+        amount: string
     }
 }
 

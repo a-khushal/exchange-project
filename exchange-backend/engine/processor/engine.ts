@@ -1,18 +1,34 @@
-import { CREATE_ORDER, ORDER_PLACED, ORDER_CANCELED, GET_OPEN_ORDERS, OPEN_ORDERS, GET_DEPTH, DEPTH, type ApiMessageType, type Fill, type Order } from "../types";
+import {
+    CREATE_ORDER,
+    ORDER_PLACED,
+    ORDER_CANCELED,
+    GET_OPEN_ORDERS,
+    OPEN_ORDERS,
+    GET_DEPTH,
+    DEPTH,
+    BASE_CURRENCY,
+    ON_RAMP,
+
+    type ApiMessageType,
+    type Fill,
+    type Order,
+} from "../types";
 import { OrderBook } from "./orderbook";
 import { v4 as uuidv4 } from 'uuid';
 import { RedisManager } from "../redis/redisManager";
 
 interface Balance {
-    [key: string]: {
-        available: number;
-        locked: number;
-    }
+    available: number;
+    locked: number;
 }
+
+type UserBalances = {
+    [key: string]: Balance;
+};
 
 export class Engine {
     orderbooks: OrderBook[] = [];
-    balances: Map<String, Balance> = new Map();
+    balances: Map<string, UserBalances> = new Map();
 
     public constructor() {
         this.orderbooks.push(new OrderBook({
@@ -90,7 +106,12 @@ export class Engine {
                     });
                 }
                 break;
-            default: 
+            case ON_RAMP:
+                const userId = message.data.userId;
+                const amount = Number(message.data.amount);
+                this.onRamp(userId, amount);
+                break;
+            default:
                 throw new Error('wrong message type')
         }
     }
@@ -202,6 +223,20 @@ export class Engine {
                 }
             });
         }
+    }
+
+    onRamp(userId: string, amount: number) {
+        const userBalance = this.balances.get(userId) || {} as UserBalances;
+
+        if (!userBalance[BASE_CURRENCY]) {
+            userBalance[BASE_CURRENCY] = {
+                available: 0,
+                locked: 0
+            };
+        }
+
+        userBalance[BASE_CURRENCY].available += amount;
+        this.balances.set(userId, userBalance);
     }
 
     private setBaseBalances() {
