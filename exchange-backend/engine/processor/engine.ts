@@ -18,6 +18,7 @@ import {
 import { OrderBook } from "./orderbook";
 import { v4 as uuidv4 } from 'uuid';
 import { RedisManager } from "../redis/redisManager";
+import Decimal from "decimal.js";
 
 interface Balance {
     available: number;
@@ -291,7 +292,7 @@ export class Engine {
                     isBuyerMaker: fill.otherUserId === userId, // TODO: Is this right?
                     price: fill.price.toString(),
                     quantity: fill.quantity.toString(),
-                    quoteQuantity: (Number(fill.quantity) * Number(fill.price)).toString(),
+                    quoteQuantity: new Decimal(fill.quantity).times(new Decimal(fill.price)).toString(),
                     timestamp: Date.now()
                 }
             });

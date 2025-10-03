@@ -1,4 +1,5 @@
 import type { Fill, Order } from "../types";
+import Decimal from "decimal.js";
 
 export class OrderBook {
     baseAsset: string;
@@ -44,16 +45,16 @@ export class OrderBook {
             order.filled = '0';
         }
 
-        let executedQty = 0;
+        let executedQty = new Decimal(0);
         let fills: Fill[] = [];
 
         if (order.side === "buy") {
             const result = this.matchBid(order);
             executedQty = result.executedQty;
             fills = result.fills;
-            order.filled = (Number(order.filled) + executedQty).toString();
+            order.filled = new Decimal(order.filled).plus(executedQty).toString();
 
-            if (Number(order.filled) < Number(order.quantity)) {
+            if (new Decimal(order.filled).lt(order.quantity)) {
                 this.bids.push(order);
             }
 
@@ -61,9 +62,9 @@ export class OrderBook {
             const result = this.matchAsk(order);
             executedQty = result.executedQty;
             fills = result.fills;
-            order.filled = (Number(order.filled) + executedQty).toString();
+            order.filled = new Decimal(order.filled).plus(executedQty).toString();
 
-            if (Number(order.filled) < Number(order.quantity)) {
+            if (new Decimal(order.filled).lt(order.quantity)) {
                 this.asks.push(order);
             }
         } else {
@@ -73,18 +74,18 @@ export class OrderBook {
         console.log("asks: ", this.asks);
         console.log("bids: ", this.bids);
 
-        return { 
-            executedQty, 
-            fills 
+        return {
+            executedQty: executedQty.toNumber(),
+            fills
         };
     }
 
     private matchBid(order: Order): {
         fills: Fill[],
-        executedQty: number
+        executedQty: Decimal
     } {
         this.asks.sort((a, b) => Number(a.price) - Number(b.price));
-        let executedQty = 0;
+        let executedQty = new Decimal(0);
         const fills: Fill[] = [];
 
         for (const ask of this.asks) {
@@ -92,20 +93,20 @@ export class OrderBook {
                 continue;
             }
 
-            const orderRemaining = Number(order.quantity) - Number(order.filled);
-            if (executedQty >= orderRemaining) {
+            const orderRemaining = new Decimal(order.quantity).minus(order.filled);
+            if (executedQty.gte(orderRemaining)) {
                 break;
             }
 
-            if (Number(ask.price) <= Number(order.price)) {
-                const askRemaining = Number(ask.quantity) - Number(ask.filled || 0);
-                if (askRemaining <= 0) {
+            if (new Decimal(ask.price).lte(order.price)) {
+                const askRemaining = new Decimal(ask.quantity).minus(ask.filled || 0);
+                if (askRemaining.lte(0)) {
                     continue;
                 }
 
-                const fillQty = Math.min(orderRemaining - executedQty, askRemaining);
-                executedQty += fillQty;
-                ask.filled = (Number(ask.filled || 0) + fillQty).toString();
+                const fillQty = Decimal.min(orderRemaining.minus(executedQty), askRemaining);
+                executedQty = executedQty.plus(fillQty);
+                ask.filled = (new Decimal(ask.filled || 0).plus(fillQty)).toString();
 
                 fills.push({
                     price: ask.price,
@@ -117,19 +118,16 @@ export class OrderBook {
             }
         }
 
-        this.asks = this.asks.filter(ask => Number(ask.filled) < Number(ask.quantity));
-        return {
-            fills,
-            executedQty
-        };
+        this.asks = this.asks.filter(ask => new Decimal(ask.filled).lt(ask.quantity));
+        return { fills, executedQty };
     }
 
     private matchAsk(order: Order): {
         fills: Fill[],
-        executedQty: number
+        executedQty: Decimal
     } {
         this.bids.sort((a, b) => Number(b.price) - Number(a.price));
-        let executedQty = 0;
+        let executedQty = new Decimal(0);
         const fills: Fill[] = [];
 
         for (const bid of this.bids) {
@@ -137,20 +135,20 @@ export class OrderBook {
                 continue;
             }
 
-            const orderRemaining = Number(order.quantity) - Number(order.filled);
-            if (executedQty >= orderRemaining) {
+            const orderRemaining = new Decimal(order.quantity).minus(order.filled);
+            if (executedQty.gte(orderRemaining)) {
                 break;
             }
 
-            if (Number(bid.price) >= Number(order.price)) {
-                const bidRemaining = Number(bid.quantity) - Number(bid.filled || 0);
-                if (bidRemaining <= 0) {
+            if (new Decimal(bid.price).gte(order.price)) {
+                const bidRemaining = new Decimal(bid.quantity).minus(bid.filled || 0);
+                if (bidRemaining.lte(0)) {
                     continue;
                 }
 
-                const fillQty = Math.min(orderRemaining - executedQty, bidRemaining);
-                executedQty += fillQty;
-                bid.filled = (Number(bid.filled || 0) + fillQty).toString();
+                const fillQty = Decimal.min(orderRemaining.minus(executedQty), bidRemaining);
+                executedQty = executedQty.plus(fillQty);
+                bid.filled = (new Decimal(bid.filled || 0).plus(fillQty)).toString();
 
                 fills.push({
                     price: bid.price,
@@ -162,11 +160,8 @@ export class OrderBook {
             }
         }
 
-        this.bids = this.bids.filter(bid => Number(bid.filled) < Number(bid.quantity));
-        return {
-            fills,
-            executedQty
-        };
+        this.bids = this.bids.filter(bid => new Decimal(bid.filled).lt(bid.quantity));
+        return { fills, executedQty };
     }
 
     public getDepth() {

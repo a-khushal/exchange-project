@@ -13,7 +13,9 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@types/decimal.js": "^7.4.3",
     "@types/redis": "^4.0.11",
+    "decimal.js": "^10.6.0",
     "redis": "^5.8.2",
     "uuid": "^12.0.0"
   }
