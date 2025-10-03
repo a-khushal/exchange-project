@@ -52,7 +52,7 @@ export class Engine {
             case CREATE_ORDER:
                 try {
                     const result = this.createOrder(message.data.market, message.data.price, message.data.quantity, message.data.side, message.data.userId);
-                    console.log(`result: ${result}\n\n`);
+                    console.log(`result: ${JSON.stringify(result)}\n\n`);
 
                     RedisManager.getInstance().sendToApi(client, {
                         type: ORDER_PLACED,

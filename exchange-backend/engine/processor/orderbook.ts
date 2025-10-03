@@ -40,39 +40,43 @@ export class OrderBook {
         executedQty: number,
         fills: Fill[]
     } {
-        if (order.side === "buy") {
-            const { fills, executedQty } = this.matchBid(order);
-            order.filled = executedQty.toString();
+        if (order.filled === undefined) {
+            order.filled = '0';
+        }
 
-            if (Number(executedQty) < Number(order.quantity)) {
+        let executedQty = 0;
+        let fills: Fill[] = [];
+
+        if (order.side === "buy") {
+            const result = this.matchBid(order);
+            executedQty = result.executedQty;
+            fills = result.fills;
+            order.filled = (Number(order.filled) + executedQty).toString();
+
+            if (Number(order.filled) < Number(order.quantity)) {
                 this.bids.push(order);
             }
 
-            console.log("asks: ", this.asks);
-            console.log("bids: ", this.bids);
-
-            return {
-                executedQty,
-                fills
-            };
         } else if (order.side === "sell") {
-            const { fills, executedQty } = this.matchAsk(order);
-            order.filled = executedQty.toString();
+            const result = this.matchAsk(order);
+            executedQty = result.executedQty;
+            fills = result.fills;
+            order.filled = (Number(order.filled) + executedQty).toString();
 
-            if (Number(executedQty) < Number(order.quantity)) {
+            if (Number(order.filled) < Number(order.quantity)) {
                 this.asks.push(order);
             }
-
-            console.log("asks: ", this.asks);
-            console.log("bids: ", this.bids);
-
-            return {
-                executedQty,
-                fills
-            };
+        } else {
+            throw new Error(`Unknown order side: ${order.side}`);
         }
 
-        throw new Error(`Unknown order side: ${order.side}`);
+        console.log("asks: ", this.asks);
+        console.log("bids: ", this.bids);
+
+        return { 
+            executedQty, 
+            fills 
+        };
     }
 
     private matchBid(order: Order): {
@@ -88,24 +92,24 @@ export class OrderBook {
                 continue;
             }
 
-            if (Number(executedQty) >= Number(order.quantity)) {
+            const orderRemaining = Number(order.quantity) - Number(order.filled);
+            if (executedQty >= orderRemaining) {
                 break;
             }
 
             if (Number(ask.price) <= Number(order.price)) {
-                const remainingOrderQty = Number(order.quantity) - Number(executedQty);
-                const remainingAskQty = Number(ask.quantity) - Number(ask.filled);
-                if (remainingAskQty <= 0) {
+                const askRemaining = Number(ask.quantity) - Number(ask.filled || 0);
+                if (askRemaining <= 0) {
                     continue;
                 }
 
-                const filledQty = Math.min(remainingOrderQty, remainingAskQty);
-                executedQty += filledQty;
-                ask.filled += filledQty;
+                const fillQty = Math.min(orderRemaining - executedQty, askRemaining);
+                executedQty += fillQty;
+                ask.filled = (Number(ask.filled || 0) + fillQty).toString();
 
                 fills.push({
                     price: ask.price,
-                    quantity: filledQty.toString(),
+                    quantity: fillQty.toString(),
                     tradeId: ++this.lastTradeId,
                     markerOrderId: ask.orderId,
                     otherUserId: ask.userId,
@@ -113,9 +117,11 @@ export class OrderBook {
             }
         }
 
-        this.asks = this.asks.filter(ask => ask.filled < ask.quantity);
-
-        return { fills, executedQty };
+        this.asks = this.asks.filter(ask => Number(ask.filled) < Number(ask.quantity));
+        return {
+            fills,
+            executedQty
+        };
     }
 
     private matchAsk(order: Order): {
@@ -131,24 +137,24 @@ export class OrderBook {
                 continue;
             }
 
-            if (Number(executedQty) >= Number(order.quantity)) {
+            const orderRemaining = Number(order.quantity) - Number(order.filled);
+            if (executedQty >= orderRemaining) {
                 break;
             }
 
             if (Number(bid.price) >= Number(order.price)) {
-                const remainingOrderQty = Number(order.quantity) - Number(executedQty);
-                const remainingBidQty = Number(bid.quantity) - Number(bid.filled);
-                if (remainingBidQty <= 0) {
+                const bidRemaining = Number(bid.quantity) - Number(bid.filled || 0);
+                if (bidRemaining <= 0) {
                     continue;
                 }
 
-                const filledQty = Math.min(remainingOrderQty, remainingBidQty);
-                executedQty += filledQty;
-                bid.filled += filledQty;
+                const fillQty = Math.min(orderRemaining - executedQty, bidRemaining);
+                executedQty += fillQty;
+                bid.filled = (Number(bid.filled || 0) + fillQty).toString();
 
                 fills.push({
                     price: bid.price,
-                    quantity: filledQty.toString(),
+                    quantity: fillQty.toString(),
                     tradeId: ++this.lastTradeId,
                     markerOrderId: bid.orderId,
                     otherUserId: bid.userId,
@@ -156,9 +162,11 @@ export class OrderBook {
             }
         }
 
-        this.bids = this.bids.filter(bid => bid.filled < bid.quantity);
-
-        return { fills, executedQty };
+        this.bids = this.bids.filter(bid => Number(bid.filled) < Number(bid.quantity));
+        return {
+            fills,
+            executedQty
+        };
     }
 
     public getDepth() {
