@@ -196,8 +196,8 @@ export class Engine {
             throw new Error("no orderbook found");
         }
 
-        const baseAsset = market.split("/")[0]!;
-        const quoteAsset = market.split("/")[1]!;
+        const baseAsset = market.split("_")[0]!;
+        const quoteAsset = market.split("_")[1]!;
 
         this.checkAndLockFunds(side, price, quantity, userId, baseAsset, quoteAsset);
         const order: Order = {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Ticker } from "../utils/types";
 import axios from "axios";
 import { SignalingManager } from "../utils/signaling-manager";
+import { BACKEND_URL } from "../utils/constants";
 
 export const MarketInfo = ({ market }: { market: string }) => {
     const [ticker, setTicker] = useState<Ticker | null>(null);
@@ -11,8 +12,8 @@ export const MarketInfo = ({ market }: { market: string }) => {
     useEffect(() => {
         async function fetchTicker() {
             try {
-                const res = await axios.get('/api/v1/tickers');
-                const data = res.data;
+                const res = await axios.get(`${BACKEND_URL}/api/v1/tickers`);
+                const data = res.data;  
                 const ticker = data.find((t: Ticker) => t.symbol === market);
                 if (!ticker) {
                     throw new Error(`No ticker found for ${market}`);

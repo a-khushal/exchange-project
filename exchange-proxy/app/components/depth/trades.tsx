@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { SignalingManager } from "@/app/utils/signaling-manager";
+import { BACKEND_URL } from "@/app/utils/constants";
 
 interface Trade {
     id: number;
@@ -15,7 +16,7 @@ export const Trades = ({ market }: { market: string }) => {
 
     useEffect(() => {
         async function fetchInitialTrades() {
-            const res = await axios.get(`/api/v1/trades?symbol=${market}`);
+            const res = await axios.get(`${BACKEND_URL}/api/v1/trades?symbol=${market}`);
             setTrades(res.data.reverse());
         }
     
@@ -24,7 +25,6 @@ export const Trades = ({ market }: { market: string }) => {
         const signaling = SignalingManager.getInstance();
     
         const handleTradeUpdate = (data: Trade[]) => {
-            console.log(data)
             setTrades((prev) => {
                 const updated = [...data.reverse(), ...prev];
                 return updated.slice(0, 50);

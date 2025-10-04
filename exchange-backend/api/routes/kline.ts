@@ -2,52 +2,81 @@ import { Client } from 'pg';
 import { Router } from "express";
 
 const pgClient = new Client({
-    user: 'your_user',
+    user: 'postgres',
     host: 'localhost',
-    database: 'my_database',
-    password: 'your_password',
+    database: 'postgres',
+    password: 'mysecretpassword',
     port: 5432,
 });
 pgClient.connect();
 
 export const klineRouter = Router();
 
-klineRouter.get("/", async (req, res) => {
-    const { market, interval, startTime: startTimeStr, endTime: endTimeStr } = req.query;
+klineRouter.get("", async (req, res) => {
+    const { symbol, interval = '1h', startTime: startTimeStr, endTime: endTimeStr } = req.query;
 
-    const startTime = startTimeStr ? Number(startTimeStr) : 0;
-    const endTime = endTimeStr ? Number(endTimeStr) : Date.now() / 1000; // Default to current time if not provided
+    if (!symbol) {
+        return res.status(400).json({ error: 'Symbol parameter is required' });
+    }
 
-    let query;
+    const startTime = startTimeStr ? Number(startTimeStr) : Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000); // Default to 30 days ago
+    const endTime = endTimeStr ? Number(endTimeStr) : Math.floor(Date.now() / 1000); // Default to current time
+
+    let tableName;
     switch (interval) {
         case '1m':
-            query = `SELECT * FROM klines_1m WHERE bucket >= $1 AND bucket <= $2`;
+            tableName = 'klines_1m';
             break;
         case '1h':
-            query = `SELECT * FROM klines_1h WHERE  bucket >= $1 AND bucket <= $2`;
+            tableName = 'klines_1h';
+            break;
+        case '1d':
+            tableName = 'klines_1d';
             break;
         case '1w':
-            query = `SELECT * FROM klines_1w WHERE bucket >= $1 AND bucket <= $2`;
+            tableName = 'klines_1w';
             break;
         default:
-            return res.status(400).send('Invalid interval');
+            return res.status(400).json({ error: 'Invalid interval. Supported intervals: 1m, 1h, 1d, 1w' });
     }
 
     try {
-        const result = await pgClient.query(query, [new Date(startTime * 1000), new Date(endTime * 1000)]);
-        res.json(result.rows.map(x => ({
-            close: x.close,
-            end: x.bucket,
-            high: x.high,
-            low: x.low,
-            open: x.open,
-            quoteVolume: x.quoteVolume,
-            start: x.start,
-            trades: x.trades,
-            volume: x.volume,
-        })));
-    } catch (err) {
-        console.log(err);
-        res.status(500).send(err);
+        const query = `
+            SELECT 
+                bucket as "end",
+                open,
+                high,
+                low,
+                close,
+                volume,
+                quote_volume as "quoteVolume",
+                trade_count as "trades",
+                bucket - ((EXTRACT(EPOCH FROM bucket)::BIGINT % 3600) * INTERVAL '1 second') as "start"
+            FROM ${tableName}
+            WHERE market = $1 
+            AND bucket >= to_timestamp($2) 
+            AND bucket <= to_timestamp($3)
+            ORDER BY bucket ASC
+        `;
+
+        const result = await pgClient.query(query, [symbol, startTime, endTime]);
+
+        // Format the response to match the KLine interface
+        const klines = result.rows.map(row => ({
+            close: String(row.close || '0'),
+            end: String(Math.floor(new Date(row.end).getTime() / 1000)),
+            high: String(row.high || '0'),
+            low: String(row.low || '0'),
+            open: String(row.open || '0'),
+            quoteVolume: String(row.quoteVolume || '0'),
+            start: String(Math.floor(new Date(row.start).getTime() / 1000)),
+            trades: String(row.trades || '0'),
+            volume: String(row.volume || '0')
+        }));
+
+        res.json(klines);
+    } catch (error) {
+        console.error('Error fetching klines:', error);
+        res.status(500).send(error);
     }
 });

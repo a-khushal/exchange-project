@@ -1,14 +1,14 @@
 export interface Ticker {
-    "firstPrice": string,
-    "high": string,
-    "lastPrice": string,
-    "low": string,
-    "priceChange": string,
-    "priceChangePercent": string,
-    "quoteVolume": string,
-    "symbol": string,
-    "trades": string,
-    "volume": string
+    firstPrice: string,
+    high: string,
+    lastPrice: string,
+    low: string,
+    priceChange: string,
+    priceChangePercent: string,
+    quoteVolume: string,
+    symbol: string,
+    trades: string,
+    volume: string
 }
 
 export interface KLine {
@@ -24,12 +24,12 @@ export interface KLine {
 }
 
 export interface Trade {
-    "id": number,
-    "isBuyerMaker": boolean,
-    "price": string,
-    "quantity": string,
-    "quoteQuantity": string,
-    "timestamp": number
+    id: number,
+    isBuyerMaker: boolean,
+    price: string,
+    quantity: string,
+    quoteQuantity: string,
+    timestamp: number
 }
 
 export interface Depth {

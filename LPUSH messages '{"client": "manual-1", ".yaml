@@ -1,0 +1,7 @@
+LPUSH messages '{"client": "manual-1", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL/USDC","price":"100","quantity":"1","side":"buy","userId":"007"}}}'
+LPUSH messages '{"client": "manual-2", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL/USDC","price":"101","quantity":"2","side":"buy","userId":"008"}}}'
+LPUSH messages '{"client": "manual-3", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"99","quantity":"1.5","side":"sell","userId":"009"}}}'
+LPUSH messages '{"client": "manual-4", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"100","quantity":"1","side":"sell","userId":"010"}}}'
+LPUSH messages '{"client": "manual-5", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"100","quantity":"0.5","side":"sell","userId":"007"}}}'
+LPUSH messages '{"client": "manual-6", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"102","quantity":"0.8","side":"buy","userId":"011"}}}'
+LPUSH messages '{"client": "manual-7", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"98","quantity":"1","side":"sell","userId":"012"}}}'

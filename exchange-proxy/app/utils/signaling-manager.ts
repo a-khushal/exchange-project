@@ -1,6 +1,6 @@
 import { Ticker } from "./types";
 
-export const BASE_URL = "wss://ws.backpack.exchange/"
+export const BASE_URL = "ws://localhost:3001/"
 
 export class SignalingManager {
     private ws: WebSocket;
@@ -58,7 +58,6 @@ export class SignalingManager {
                     }
 
                     if (type === "trade") {
-                        console.log('trade', message.data)
                         const trade = {
                             id: message.data.t,
                             isBuyerMaker: message.data.m,
