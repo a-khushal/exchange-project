@@ -10,6 +10,7 @@ export const BASE_CURRENCY = 'USCD'
 export const CANCEL_ORDER = 'CANCEL_ORDER'
 export const TRADE_ADDED = 'TRADE_ADDED'
 export const ORDER_UPDATE = 'ORDER_UPDATE'
+export const GET_BALANCE = 'GET_BALANCE'
 
 export interface Order {
     price: string;
@@ -60,6 +61,12 @@ export type ApiMessageType = {
         market: string,
         orderId: string,
     }
+} | {
+    type: typeof GET_BALANCE,
+    data: {
+        userId: string,
+        market: string
+    }
 }
 
 export type ApiResponseType = {
@@ -84,6 +91,18 @@ export type ApiResponseType = {
     payload: {
         bids: [string, string][],
         asks: [string, string][]
+    }
+} | {
+    type: typeof GET_BALANCE,
+    payload: {
+        base: {
+            available: number;
+            locked: number;
+        };
+        quote: {
+            available: number;
+            locked: number;
+        };
     }
 }
 

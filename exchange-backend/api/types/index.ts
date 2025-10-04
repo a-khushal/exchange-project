@@ -5,6 +5,7 @@ export const GET_OPEN_ORDERS = 'GET_OPEN_ORDERS'
 export const OPEN_ORDERS = 'OPEN_ORDERS'
 export const DEPTH = 'DEPTH'
 export const GET_DEPTH = 'GET_DEPTH'
+export const GET_BALANCE = 'GET_BALANCE'
 export const CANCEL_ORDER = 'CANCEL_ORDER'
 
 export interface Fill {
@@ -24,44 +25,56 @@ export interface Order {
     side: 'sell' | 'buy';
 }
 
-export type MessageType = {
-    type: typeof CREATE_ORDER;
-    data: {
-        market: string,
-        price: string,
-        quantity: string,
-        side: 'buy' | 'sell'
-        userId: string,
+export type MessageType =
+    | {
+        type: typeof CREATE_ORDER;
+        data: {
+            market: string;
+            price: string;
+            quantity: string;
+            side: "buy" | "sell";
+            userId: string;
+        };
     }
-} | {
-    type: typeof GET_OPEN_ORDERS;
-    data: {
-        userId: string,
-        market: string
+    | {
+        type: typeof GET_OPEN_ORDERS;
+        data: {
+            userId: string;
+            market: string;
+        };
     }
-} | {
-    type: typeof GET_DEPTH,
-    data: {
-        market: string,
+    | {
+        type: typeof GET_DEPTH;
+        data: {
+            market: string;
+        };
     }
-} | {
-    type: typeof CANCEL_ORDER;
-    data: {
-        orderId: string,
-        market: string,
+    | {
+        type: typeof GET_BALANCE;
+        data: {
+            userId: string;
+            market: string;
+        };
     }
-}
+    | {
+        type: typeof CANCEL_ORDER;
+        data: {
+            orderId: string;
+            market: string;
+        };
+    };
+
 
 
 export type ApiResponseType = {
-    type: typeof ORDER_PLACED;
+    type: typeof ORDER_PLACED,
     payload: {
         orderId: string;
         executedQty: number;
         fills: Fill[]
-    };
+    }
 } | {
-    type: typeof OPEN_ORDERS;
+    type: typeof OPEN_ORDERS,
     payload: Order[]
 } | {
     type: typeof DEPTH,
@@ -69,8 +82,20 @@ export type ApiResponseType = {
         bids: [string, string][],
         asks: [string, string][]
     }
-} |  {
-    type: typeof ORDER_CANCELED;
+} | {
+    type: typeof GET_BALANCE,
+    payload: {
+        base: {
+            available: number;
+            locked: number;
+        };
+        quote: {
+            available: number;
+            locked: number;
+        };
+    }
+} | {
+    type: typeof ORDER_CANCELED,
     payload: {
         orderId: string,
         executedQty: number,

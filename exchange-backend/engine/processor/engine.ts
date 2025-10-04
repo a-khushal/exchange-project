@@ -11,6 +11,7 @@ import {
     CANCEL_ORDER,
     TRADE_ADDED,
     ORDER_UPDATE,
+    GET_BALANCE,
     type ApiMessageType,
     type Fill,
     type Order,
@@ -59,7 +60,7 @@ export class Engine {
                         type: ORDER_PLACED,
                         payload: {
                             orderId: result.orderId,
-                            executedQty: result.executedQty,
+                            executedQty: Number(result.executedQty),
                             fills: result.fills
                         }
                     })
@@ -115,7 +116,7 @@ export class Engine {
                 break;
             case ON_RAMP:
                 const userId = message.data.userId;
-                const amount = Number(message.data.amount);
+                const amount = new Decimal(message.data.amount);
                 this.onRamp(userId, amount);
                 break;
             case CANCEL_ORDER:
@@ -141,7 +142,7 @@ export class Engine {
 
                     if (order.side === "buy") {
                         const price = cancelOrderbook.cancelBid(order);
-                        const leftQuantity = (Number(order.quantity) - Number(order.filled)) * Number(order.price);
+                        const leftQuantity = new Decimal(order.quantity).minus(order.filled).times(order.price);
 
                         const userBalances = this.balances.get(order.userId);
                         if (!userBalances) {
@@ -153,15 +154,15 @@ export class Engine {
                             throw new Error(`No balance for asset ${quoteAsset}`);
                         }
 
-                        assetBalance.locked -= leftQuantity;
-                        assetBalance.available += leftQuantity;
+                        assetBalance.locked = new Decimal(assetBalance.locked).minus(leftQuantity).toNumber();
+                        assetBalance.available = new Decimal(assetBalance.available).plus(leftQuantity).toNumber();
 
                         if (price) {
                             this.sendUpdatedDepthAt(price.toString(), cancelMarket);
                         }
                     } else {
                         const price = cancelOrderbook.cancelAsk(order);
-                        const leftQuantity = Number(order.quantity) - Number(order.filled);
+                        const leftQuantity = new Decimal(order.quantity).minus(order.filled);
 
                         const userBalances = this.balances.get(order.userId);
                         if (!userBalances) {
@@ -173,8 +174,8 @@ export class Engine {
                             throw new Error(`No balance for asset ${baseAsset}`);
                         }
 
-                        assetBalance.locked -= leftQuantity;
-                        assetBalance.available += leftQuantity;
+                        assetBalance.locked = new Decimal(assetBalance.locked).minus(leftQuantity).toNumber();
+                        assetBalance.available = new Decimal(assetBalance.available).plus(leftQuantity).toNumber();
 
                         if (price) {
                             this.sendUpdatedDepthAt(price.toString(), cancelMarket);
@@ -184,6 +185,47 @@ export class Engine {
                     console.log(e);
                 }
                 break;
+            case GET_BALANCE: {
+                try {
+                    if (message.type !== GET_BALANCE) break;
+
+                    const { userId, market } = message.data;
+                    const [baseAsset, quoteAsset] = market.split('_');
+
+                    if (!baseAsset || !quoteAsset) {
+                        throw new Error('Invalid market format');
+                    }
+
+                    const userBalances = this.balances.get(userId);
+                    if (!userBalances) {
+                        throw new Error('User not found');
+                    }
+
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: GET_BALANCE,
+                        payload: {
+                            base: {
+                                available: userBalances[baseAsset]?.available || 0,
+                                locked: userBalances[baseAsset]?.locked || 0
+                            },
+                            quote: {
+                                available: userBalances[quoteAsset]?.available || 0,
+                                locked: userBalances[quoteAsset]?.locked || 0
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error getting balance:', e);
+                    RedisManager.getInstance().sendToApi(client, {
+                        type: GET_BALANCE,
+                        payload: {
+                            base: { available: 0, locked: 0 },
+                            quote: { available: 0, locked: 0 }
+                        }
+                    });
+                }
+                break;
+            }
             default:
                 throw new Error('wrong message type')
         }
@@ -212,7 +254,7 @@ export class Engine {
         this.updateBalance(userId, quoteAsset, baseAsset, fills, side);
 
         this.createDbTrades(fills, market, userId);
-        this.updateDbOrders(order, executedQty, fills, market);
+        this.updateDbOrders(order, Number(executedQty), fills, market);
         this.publisWsDepthUpdates(fills, price, side, market);
         this.publishWsTrades(fills, userId, market);
 
@@ -230,8 +272,8 @@ export class Engine {
             throw new Error("Insufficient funds");
         }
 
-        const amount = Number(quantity);
-        const cost = Number(price) * amount;
+        const amount = new Decimal(quantity);
+        const cost = new Decimal(price).times(amount);
 
         if (side === "buy") {
             const assetBalance = balance[quoteAsset];
@@ -240,24 +282,24 @@ export class Engine {
                 throw new Error(`No balance for asset ${quoteAsset}`);
             }
 
-            if (assetBalance.available < cost) {
+            if (new Decimal(assetBalance.available).lessThan(cost)) {
                 throw new Error("Insufficient funds");
             }
 
-            assetBalance.available -= cost;
-            assetBalance.locked += cost;
+            assetBalance.available = new Decimal(assetBalance.available).minus(cost).toNumber();
+            assetBalance.locked = new Decimal(assetBalance.locked).plus(cost).toNumber();
         } else if (side === 'sell') {
             const assetBalance = balance[baseAsset];
             if (!assetBalance) {
                 throw new Error(`No balance for asset ${baseAsset}`);
             }
 
-            if (assetBalance.available < amount) {
+            if (new Decimal(assetBalance.available).lessThan(amount)) {
                 throw new Error("Insufficient funds");
             }
 
-            assetBalance.available -= amount;
-            assetBalance.locked += amount;
+            assetBalance.available = new Decimal(assetBalance.available).minus(amount).toNumber();
+            assetBalance.locked = new Decimal(assetBalance.locked).plus(amount).toNumber();
         }
     }
 
@@ -289,7 +331,7 @@ export class Engine {
                 data: {
                     market: market,
                     id: fill.tradeId.toString(),
-                    isBuyerMaker: fill.otherUserId === userId, // TODO: Is this right?
+                    isBuyerMaker: fill.otherUserId === userId,
                     price: fill.price.toString(),
                     quantity: fill.quantity.toString(),
                     quoteQuantity: new Decimal(fill.quantity).times(new Decimal(fill.price)).toString(),
@@ -364,7 +406,7 @@ export class Engine {
                 data: {
                     e: "trade",
                     t: fill.tradeId,
-                    m: fill.otherUserId === userId, // TODO: Is this right?
+                    m: fill.otherUserId === userId,
                     p: fill.price.toString(),
                     q: fill.quantity.toString(),
                     s: market,
@@ -383,14 +425,14 @@ export class Engine {
                     return;
                 }
 
-                if (seller.quoteAsset && seller.baseAsset) {
-                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (Number(fill.quantity) * Number(fill.price));
-                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - Number(fill.quantity);
+                if (seller[quoteAsset] && seller[baseAsset]) {
+                    seller[quoteAsset].available = new Decimal(seller[quoteAsset].available).plus(new Decimal(fill.quantity).times(fill.price)).toNumber();
+                    seller[baseAsset].locked = new Decimal(seller[baseAsset].locked).minus(fill.quantity).toNumber();
                 }
 
-                if (buyer.quoteAsset && buyer.baseAsset) {
-                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (Number(fill.quantity) * Number(fill.price));
-                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + Number(fill.quantity);
+                if (buyer[quoteAsset] && buyer[baseAsset]) {
+                    buyer[quoteAsset].locked = new Decimal(buyer[quoteAsset].locked).minus(new Decimal(fill.quantity).times(fill.price)).toNumber();
+                    buyer[baseAsset].available = new Decimal(buyer[baseAsset].available).plus(fill.quantity).toNumber();
                 }
             });
         } else if (side == 'sell') {
@@ -402,20 +444,20 @@ export class Engine {
                     return;
                 }
 
-                if (buyer.quoteAsset && buyer.baseAsset) {
-                    buyer.quoteAsset.locked = (buyer.quoteAsset.locked ?? 0) - (Number(fill.quantity) * Number(fill.price));
-                    buyer.baseAsset.available = (buyer.baseAsset.available ?? 0) + Number(fill.quantity);
+                if (buyer[quoteAsset] && buyer[baseAsset]) {
+                    buyer[quoteAsset].locked = new Decimal(buyer[quoteAsset].locked).minus(new Decimal(fill.quantity).times(fill.price)).toNumber();
+                    buyer[baseAsset].available = new Decimal(buyer[baseAsset].available).plus(fill.quantity).toNumber();
                 }
 
-                if (seller.quoteAsset && seller.baseAsset) {
-                    seller.quoteAsset.available = (seller.quoteAsset.available ?? 0) + (Number(fill.quantity) * Number(fill.price));
-                    seller.baseAsset.locked = (seller.baseAsset.locked ?? 0) - Number(fill.quantity);
+                if (seller[quoteAsset] && seller[baseAsset]) {
+                    seller[quoteAsset].available = new Decimal(seller[quoteAsset].available).plus(new Decimal(fill.quantity).times(fill.price)).toNumber();
+                    seller[baseAsset].locked = new Decimal(seller[baseAsset].locked).minus(fill.quantity).toNumber();
                 }
             });
         }
     }
 
-    public onRamp(userId: string, amount: number) {
+    public onRamp(userId: string, amount: Decimal) {
         const userBalance = this.balances.get(userId) || {} as UserBalances;
 
         if (!userBalance[BASE_CURRENCY]) {
@@ -425,7 +467,7 @@ export class Engine {
             };
         }
 
-        userBalance[BASE_CURRENCY].available += amount;
+        userBalance[BASE_CURRENCY].available = new Decimal(userBalance[BASE_CURRENCY].available).plus(amount).toNumber();
         this.balances.set(userId, userBalance);
     }
 
@@ -434,33 +476,33 @@ export class Engine {
         const QUOTE_CURRENCY = "USDC";
 
         this.balances.set("007", {
-            [BASE_CURRENCY]: { available: 2, locked: 0 },
-            [QUOTE_CURRENCY]: { available: 200, locked: 0 }
+            [BASE_CURRENCY]: { available: 50, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 5000, locked: 0 }
         });
 
         this.balances.set("008", {
-            [BASE_CURRENCY]: { available: 2, locked: 0 },
-            [QUOTE_CURRENCY]: { available: 300, locked: 0 }
+            [BASE_CURRENCY]: { available: 50, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 5000, locked: 0 }
         });
 
         this.balances.set("009", {
-            [BASE_CURRENCY]: { available: 2, locked: 0 },
-            [QUOTE_CURRENCY]: { available: 100, locked: 0 }
+            [BASE_CURRENCY]: { available: 50, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 5000, locked: 0 }
         });
 
         this.balances.set("010", {
-            [BASE_CURRENCY]: { available: 2, locked: 0 },
-            [QUOTE_CURRENCY]: { available: 100, locked: 0 }
+            [BASE_CURRENCY]: { available: 50, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 5000, locked: 0 }
         });
 
         this.balances.set("011", {
-            [BASE_CURRENCY]: { available: 2, locked: 0 },
-            [QUOTE_CURRENCY]: { available: 200, locked: 0 }
+            [BASE_CURRENCY]: { available: 50, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 5000, locked: 0 }
         });
 
         this.balances.set("012", {
-            [BASE_CURRENCY]: { available: 2, locked: 0 },
-            [QUOTE_CURRENCY]: { available: 100, locked: 0 }
+            [BASE_CURRENCY]: { available: 50, locked: 0 },
+            [QUOTE_CURRENCY]: { available: 5000, locked: 0 }
         });
     }
-}    
+}

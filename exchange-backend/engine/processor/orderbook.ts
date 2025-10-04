@@ -5,7 +5,7 @@ export class OrderBook {
     baseAsset: string;
     quoteAsset: string;
     lastTradeId: number;
-    currentPrice: number;
+    currentPrice: Decimal;
     bids: Order[];
     asks: Order[];
 
@@ -13,10 +13,10 @@ export class OrderBook {
         baseAsset: string,
         quoteAsset: string,
         lastTradeId?: number;
-        currentPrice?: number;
+        currentPrice?: number | string;
     }) {
         this.lastTradeId = lastTradeId || 0;
-        this.currentPrice = currentPrice || 0;
+        this.currentPrice = new Decimal(currentPrice || 0);
         this.baseAsset = baseAsset;
         this.quoteAsset = quoteAsset;
         this.bids = [];
@@ -24,7 +24,7 @@ export class OrderBook {
     }
 
     public get market() {
-        return [this.baseAsset, this.quoteAsset].join("/");
+        return `${this.baseAsset}_${this.quoteAsset}`;
     }
 
     public get getSnapshot() {
@@ -33,17 +33,12 @@ export class OrderBook {
             bids: this.bids,
             asks: this.asks,
             lastTradeId: this.lastTradeId,
-            currentPrice: this.currentPrice
+            currentPrice: this.currentPrice.toString()
         }
     }
 
-    public match(order: Order): {
-        executedQty: number,
-        fills: Fill[]
-    } {
-        if (order.filled === undefined) {
-            order.filled = '0';
-        }
+    public match(order: Order): { executedQty: string, fills: Fill[] } {
+        if (!order.filled) order.filled = '0';
 
         let executedQty = new Decimal(0);
         let fills: Fill[] = [];
@@ -57,7 +52,6 @@ export class OrderBook {
             if (new Decimal(order.filled).lt(order.quantity)) {
                 this.bids.push(order);
             }
-
         } else if (order.side === "sell") {
             const result = this.matchAsk(order);
             executedQty = result.executedQty;
@@ -71,20 +65,14 @@ export class OrderBook {
             throw new Error(`Unknown order side: ${order.side}`);
         }
 
-        console.log("asks: ", this.asks);
-        console.log("bids: ", this.bids);
-
         return {
-            executedQty: executedQty.toNumber(),
+            executedQty: executedQty.toString(),
             fills
         };
     }
 
-    private matchBid(order: Order): {
-        fills: Fill[],
-        executedQty: Decimal
-    } {
-        this.asks.sort((a, b) => Number(a.price) - Number(b.price));
+    private matchBid(order: Order): { fills: Fill[], executedQty: Decimal } {
+        this.asks.sort((a, b) => new Decimal(a.price).cmp(new Decimal(b.price)));
         let executedQty = new Decimal(0);
         const fills: Fill[] = [];
 
@@ -119,14 +107,14 @@ export class OrderBook {
         }
 
         this.asks = this.asks.filter(ask => new Decimal(ask.filled).lt(ask.quantity));
-        return { fills, executedQty };
+        return {
+            fills,
+            executedQty
+        };
     }
 
-    private matchAsk(order: Order): {
-        fills: Fill[],
-        executedQty: Decimal
-    } {
-        this.bids.sort((a, b) => Number(b.price) - Number(a.price));
+    private matchAsk(order: Order): { fills: Fill[], executedQty: Decimal } {
+        this.bids.sort((a, b) => new Decimal(b.price).cmp(new Decimal(a.price)));
         let executedQty = new Decimal(0);
         const fills: Fill[] = [];
 
@@ -161,63 +149,56 @@ export class OrderBook {
         }
 
         this.bids = this.bids.filter(bid => new Decimal(bid.filled).lt(bid.quantity));
-        return { fills, executedQty };
+
+        return {
+            fills,
+            executedQty
+        };
     }
 
     public getDepth() {
-        const bids: [string, string][] = [];
-        const asks: [string, string][] = [];
-
-        const bidsMap = new Map<string, number>();
-        const asksMap = new Map<string, number>();
+        const bidsMap = new Map<string, Decimal>();
+        const asksMap = new Map<string, Decimal>();
 
         this.bids.forEach(bid => {
-            const priceKey = bid.price.toString();
-            bidsMap.set(priceKey, (bidsMap.get(priceKey) ?? 0) + Number(bid.quantity));
+            if (new Decimal(bid.filled || '0').lt(bid.quantity)) {
+                const price = new Decimal(bid.price).toString();
+                bidsMap.set(price, (bidsMap.get(price) || new Decimal(0)).plus(new Decimal(bid.quantity).minus(bid.filled || '0')));
+            }
         });
 
         this.asks.forEach(ask => {
-            const priceKey = ask.price.toString();
-            asksMap.set(priceKey, (asksMap.get(priceKey) ?? 0) + Number(ask.quantity));
+            if (new Decimal(ask.filled || '0').lt(ask.quantity)) {
+                const price = new Decimal(ask.price).toString();
+                asksMap.set(price, (asksMap.get(price) || new Decimal(0)).plus(new Decimal(ask.quantity).minus(ask.filled || '0')));
+            }
         });
 
-        bidsMap.forEach((qty, price) => bids.push([price, qty.toString()]));
-        asksMap.forEach((qty, price) => asks.push([price, qty.toString()]));
+        const bids = Array.from(bidsMap.entries())
+            .map(([price, qty]) => [price, qty.toString()] as [string, string])
+            .sort((a, b) => new Decimal(b[0]).minus(a[0]).toNumber());
 
-        bids.sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
-        asks.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+        const asks = Array.from(asksMap.entries())
+            .map(([price, qty]) => [price, qty.toString()] as [string, string])
+            .sort((a, b) => new Decimal(a[0]).minus(b[0]).toNumber());
 
-        return { bids, asks };
+        return {
+            bids: bids.filter(([_, qty]) => new Decimal(qty).gt(0)),
+            asks: asks.filter(([_, qty]) => new Decimal(qty).gt(0))
+        };
     }
 
     public getOpenOrders(userId: string) {
-        const bids = this.bids.filter(b => b.userId === userId);
-        const asks = this.asks.filter(a => a.userId === userId);
-
-        return [...bids, ...asks];
+        return [...this.bids.filter(b => b.userId === userId), ...this.asks.filter(a => a.userId === userId)];
     }
 
     public cancelBid(order: Order) {
-        const index = this.bids.findIndex(x => x.orderId === order.orderId);
-
-        if (index !== -1) {
-            const bid = this.bids[index];
-            this.bids.splice(index, 1);
-            return bid?.price;
-        }
-
-        return undefined;
+        const index = this.bids.findIndex(o => o.orderId === order.orderId);
+        return index !== -1 ? this.bids.splice(index, 1)[0]?.price : undefined;
     }
 
     public cancelAsk(order: Order) {
-        const index = this.asks.findIndex(x => x.orderId === order.orderId);
-
-        if (index !== -1) {
-            const ask = this.asks[index];
-            this.asks.splice(index, 1);
-            return ask?.price;
-        }
-
-        return undefined;
+        const index = this.asks.findIndex(o => o.orderId === order.orderId);
+        return index !== -1 ? this.asks.splice(index, 1)[0]?.price : undefined;
     }
 }

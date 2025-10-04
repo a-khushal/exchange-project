@@ -1,10 +1,9 @@
 export const BidsTable = ({ bids }: { bids: [string, string][] }) => {
     let currentTotal = 0;
 
-    const filteredBids = bids.filter(([_, quantity]) => {
-        const q = parseFloat(quantity);
-        return q > 0;
-    });
+    const filteredBids = bids
+        .filter(([_, quantity]) => parseFloat(quantity) > 0)
+        .sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
 
     const relevantBids = filteredBids.slice(0, 15);
 
