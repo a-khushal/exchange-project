@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { Client } from 'pg';
+import Decimal from 'decimal.js';
 
 const pgClient = new Client({
     user: 'postgres',
@@ -30,13 +31,20 @@ tradesRouter.get('/', async (req, res) => {
             [symbol, limitNum]
         );
 
-        res.json(result.rows.map(trade => ({
-            id: trade.id,
-            isBuyerMaker: trade.side === 'sell',
-            price: trade.price.toString(),
-            quantity: trade.amount.toString(),
-            timestamp: Math.floor(new Date(trade.timestamp).getTime() / 1000)
-        })));
+        res.json(result.rows.map(trade => {
+            const price = new Decimal(trade.price || '0');
+            const quantity = new Decimal(trade.amount || '0');
+            const quoteQuantity = price.times(quantity).toString();
+
+            return {
+                id: trade.id,
+                isBuyerMaker: trade.side === 'sell',
+                price: price.toString(),
+                quantity: quantity.toString(),
+                quoteQuantity: quoteQuantity,
+                timestamp: Math.floor(new Date(trade.timestamp).getTime() / 1000)
+            };
+        }));
     } catch (error) {
         console.error('Error fetching trades:', error);
         res.status(500).json({ error: 'Internal server error' });
