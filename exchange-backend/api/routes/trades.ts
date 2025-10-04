@@ -13,7 +13,7 @@ pgClient.connect();
 
 export const tradesRouter = Router();
 
-tradesRouter.get('/', async (req, res) => {
+tradesRouter.get('', async (req, res) => {
     const { symbol, limit = '50' } = req.query;
 
     if (!symbol) {

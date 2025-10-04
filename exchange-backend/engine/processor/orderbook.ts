@@ -65,6 +65,9 @@ export class OrderBook {
             throw new Error(`Unknown order side: ${order.side}`);
         }
 
+        console.log("bid", this.bids);
+        console.log("ask", this.asks);
+
         return {
             executedQty: executedQty.toString(),
             fills

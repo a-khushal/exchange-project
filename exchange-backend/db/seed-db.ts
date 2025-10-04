@@ -1,8 +1,6 @@
 import { DbClient } from "./db-client";
 
 async function initializeDB() {
-    await DbClient.getInstance();
-
     await DbClient.getInstance().query(`
         DROP TABLE IF EXISTS "sol_prices";
         CREATE TABLE "sol_prices"(
@@ -12,7 +10,7 @@ async function initializeDB() {
             currency_code   VARCHAR (10)
         );
         
-        SELECT create_hypertable('sol_prices', 'time', 'price', 2);
+        SELECT create_hypertable('sol_prices', 'time');
     `);
 
     await DbClient.getInstance().query(`
