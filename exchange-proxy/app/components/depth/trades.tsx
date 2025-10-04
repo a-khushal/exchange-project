@@ -31,12 +31,12 @@ export const Trades = ({ market }: { market: string }) => {
             });
         };
     
-        signaling.registerCallback("trade", handleTradeUpdate, `TRADE-${market}`);
-        signaling.sendMessage({ method: "SUBSCRIBE", params: [`trade.${market}`] });
+        signaling.registerCallback("trade", handleTradeUpdate, `trade@${market}`);
+        signaling.sendMessage({ method: "SUBSCRIBE", params: [`trade@${market}`] });
     
         return () => {
-            signaling.deRegisterCallback("trade", `TRADE-${market}`);
-            signaling.sendMessage({ method: "UNSUBSCRIBE", params: [`trade.${market}`] });
+            signaling.deRegisterCallback("trade", `trade@${market}`);
+            signaling.sendMessage({ method: "UNSUBSCRIBE", params: [`trade@${market}`] });
         };
     }, [market]);
             

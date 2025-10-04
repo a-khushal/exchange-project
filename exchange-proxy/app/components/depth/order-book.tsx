@@ -44,46 +44,47 @@ export const OrderBook = ({ market }: { market: string }) => {
 
         signaling.registerCallback("depth", (data: any) => {
             setBids((originalBids) => {
-                const bidsAfterUpdate = [...(originalBids || [])];
+                let updated = new Map(originalBids || []);
 
-                for (let i = 0; i < bidsAfterUpdate.length; i++) {
-                    for (let j = 0; j < data.bids.length; j++) {
-                        if (bidsAfterUpdate[i][0] === data.bids[j][0]) {
-                            bidsAfterUpdate[i][1] = data.bids[j][1];
-                            break;
-                        }
+                for (const [price, size] of data.bids) {
+                    if (parseFloat(size) === 0) {
+                        updated.delete(price);
+                    } else {
+                        updated.set(price, size);
                     }
                 }
-                return bidsAfterUpdate;
+
+                return Array.from(updated.entries()).sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]));
             });
 
             setAsks((originalAsks) => {
-                const asksAfterUpdate = [...(originalAsks || [])];
+                let updated = new Map(originalAsks || []);
 
-                for (let i = 0; i < asksAfterUpdate.length; i++) {
-                    for (let j = 0; j < data.asks.length; j++) {
-                        if (asksAfterUpdate[i][0] === data.asks[j][0]) {
-                            asksAfterUpdate[i][1] = data.asks[j][1];
-                            break;
-                        }
+                for (const [price, size] of data.asks) {
+                    if (parseFloat(size) === 0) {
+                        updated.delete(price);
+                    } else {
+                        updated.set(price, size);
                     }
                 }
-                return asksAfterUpdate;
+
+                return Array.from(updated.entries()).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
             });
-        }, `DEPTH-${market}`);
+        }, `depth@${market}`);
 
         signaling.registerCallback("ticker", (data: any) => {
             if (data.symbol === market && data.lastPrice) {
                 setPrice(data.lastPrice);
             }
-        }, `TICKER-${market}`);
+        }, `ticker@${market}`);
 
-        signaling.sendMessage({ method: "SUBSCRIBE", params: [`depth.${market}`, `ticker.${market}`] });
+        signaling.sendMessage({ method: "SUBSCRIBE", params: [`depth@${market}`, `ticker@${market}`] });
 
         return () => {
-            signaling.sendMessage({ method: "UNSUBSCRIBE", params: [`depth.200ms.${market}`, `ticker.200ms.${market}`] });
-            signaling.deRegisterCallback("depth", `DEPTH-${market}`);
-            signaling.deRegisterCallback("ticker", `TICKER-${market}`);
+            // signaling.sendMessage({ method: "UNSUBSCRIBE", params: [`depth.200ms.${market}`, `ticker.200ms.${market}`] });
+            signaling.sendMessage({ method: "UNSUBSCRIBE", params: [`depth@${market}`, `ticker@${market}`] });
+            signaling.deRegisterCallback("depth", `depth@${market}`);
+            signaling.deRegisterCallback("ticker", `ticker@${market}`);
         };
     }, []);
 

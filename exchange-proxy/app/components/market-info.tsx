@@ -27,7 +27,7 @@ export const MarketInfo = ({ market }: { market: string }) => {
 
         fetchTicker();
 
-        const callbackId = `TICKER-${market}`;
+        const callbackId = `ticker@${market}`;
         const ws = SignalingManager.getInstance();
 
         const updateTicker = (data: Partial<Ticker>) => {
@@ -46,11 +46,11 @@ export const MarketInfo = ({ market }: { market: string }) => {
         };
 
         ws.registerCallback("ticker", updateTicker, callbackId);
-        ws.sendMessage({ method: "SUBSCRIBE", params: [`ticker.${market}`] });
+        ws.sendMessage({ method: "SUBSCRIBE", params: [`ticker@${market}`] });
 
         return () => {
             ws.deRegisterCallback("ticker", callbackId);
-            ws.sendMessage({ method: "UNSUBSCRIBE", params: [`ticker.${market}`] });
+            ws.sendMessage({ method: "UNSUBSCRIBE", params: [`ticker@${market}`] });
         };
     }, [market]);
 
