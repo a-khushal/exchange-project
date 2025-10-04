@@ -6,6 +6,7 @@ LPUSH messages '{"client": "manual-5", "message": {"type": "CREATE_ORDER", "data
 LPUSH messages '{"client": "manual-6", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"102","quantity":"0.8","side":"buy","userId":"011"}}}'
 LPUSH messages '{"client": "manual-7", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"98","quantity":"1","side":"sell","userId":"012"}}}'
 
+
 LPUSH messages '{"client": "manual-1", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"99","quantity":"1","side":"buy","userId":"007"}}}'
 LPUSH messages '{"client": "manual-2", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"99.3","quantity":"0.7","side":"buy","userId":"008"}}}'
 LPUSH messages '{"client": "manual-3", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"99.5","quantity":"1","side":"buy","userId":"011"}}}'
@@ -47,3 +48,11 @@ LPUSH messages '{"client": "manual-38", "message": {"type": "CREATE_ORDER", "dat
 LPUSH messages '{"client": "manual-39", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"101.7","quantity":"0.5","side":"sell","userId":"010"}}}'
 LPUSH messages '{"client": "manual-40", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"102.8","quantity":"0.6","side":"sell","userId":"012"}}}'
 LPUSH messages '{"client": "manual-41", "message": {"type": "CREATE_ORDER", "data": {"market":"SOL_USDC","price":"100.1","quantity":"0.5","
+
+
+DROP MATERIALIZED VIEW IF EXISTS klines_1m CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS klines_1h CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS klines_1w CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS market_stats CASCADE;
+DROP TABLE IF EXISTS sol_prices CASCADE;
+

@@ -13,6 +13,7 @@ export const MarketInfo = ({ market }: { market: string }) => {
         async function fetchTicker() {
             try {
                 const res = await axios.get(`${BACKEND_URL}/api/v1/tickers`);
+                console.log("ticker: ", res)
                 const data = res.data;  
                 const ticker = data.find((t: Ticker) => t.symbol === market);
                 if (!ticker) {

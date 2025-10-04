@@ -1,8 +1,8 @@
-version: '3.8'
+version: "3.9"
 
 services:
   timescaledb:
-    image: timescale/timescaledb:latest-pg12
+    image: timescale/timescaledb:2.10.3-pg12
     container_name: timescaledb
     ports:
       - "5432:5432"
@@ -10,14 +10,22 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
+      TZ: Asia/Kolkata
     volumes:
       - timescale-data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "shared_preload_libraries=timescaledb", "-c", "timescaledb.telemetry_level=off"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:alpine
     container_name: redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
 volumes:
   timescale-data:

@@ -16,9 +16,9 @@ export function TradeView({
         let klineData: KLine[] = [];
         try {
             const response = await axios.get(`${BACKEND_URL}/api/v1/klines?symbol=${market}&interval=${"1h"}&startTime=${Math.floor((new Date().getTime() - 1000 * 60 * 60 * 24 * 10) / 1000)}&endTime=${Math.floor(new Date().getTime() / 1000)}`);
+            console.log("klinedata: ", response);
             klineData = response.data;
             klineData.sort((x, y) => (Number(x.end) < Number(y.end) ? -1 : 1));
-            console.log(klineData);
         } catch (e) {
             console.error(e);
         }

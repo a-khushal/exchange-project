@@ -12,20 +12,20 @@ pgClient.connect();
 
 export const tickerRouter = Router();
 
-tickerRouter.get('', async (req, res) => {
+tickerRouter.get('', async (_req, res) => {
     try {
         const query = `
             SELECT 
-                market as "symbol",
-                open_price::text as "firstPrice",
-                high_24h::text as "high",
-                last_price::text as "lastPrice",
-                low_24h::text as "low",
-                price_change_24h::text as "priceChange",
-                price_change_percent_24h::text as "priceChangePercent",
-                quote_volume::text as "quoteVolume",
-                '0' as "trades",
-                base_volume::text as "volume"
+                symbol as "symbol",
+                open_price as "firstPrice",
+                high as "high",
+                last_price as "lastPrice",
+                low as "low",
+                price_change as "priceChange",
+                price_change_percent as "priceChangePercent",
+                quote_volume as "quoteVolume",
+                volume as "volume",
+                trades as "trades"
             FROM market_stats
         `;
 
