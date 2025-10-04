@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { TRADE_ADDED, type DbMessage } from './types';
+import { ORDER_UPDATE, TRADE_ADDED, type DbMessage } from './types';
 import { DbClient } from './db-client';
 
 async function main() {
@@ -14,8 +14,6 @@ async function main() {
         } else {
             const data: DbMessage = JSON.parse(response);
             if (data.type === TRADE_ADDED) {
-                console.log("Adding trade data:", data);
-
                 const { market: currency_code, price, quantity, timestamp } = data.data;
                 const time = new Date(timestamp);
 
@@ -32,6 +30,44 @@ async function main() {
 
                 await DbClient.getInstance().query(query, values);
                 console.log("Trade inserted successfully");
+            } else if (data.type === ORDER_UPDATE) {
+                const {
+                    orderId,
+                    executedQty,
+                    market,
+                    price,
+                    side
+                } = data.data;
+
+                if (!market || !price || !side || !executedQty || Number(executedQty) <= 0) {
+                    continue;
+                }
+
+                const tradePrice = Number(price);
+                const tradeAmount = Number(executedQty);
+                const tradeTimestamp = new Date();
+                const tradeSide = side;
+
+                const query = `
+                    INSERT INTO trades (market, price, amount, side, timestamp, order_id)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                `;
+
+                const values = [
+                    market,
+                    tradePrice,
+                    tradeAmount,
+                    tradeSide,
+                    tradeTimestamp,
+                    orderId
+                ];
+
+                try {
+                    await DbClient.getInstance().query(query, values);
+                    console.log(`Trade inserted - Market: ${market}, Price: ${tradePrice}, Amount: ${tradeAmount}, Side: ${tradeSide}`);
+                } catch (err) {
+                    console.error(err);
+                }
             }
         }
     }

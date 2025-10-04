@@ -6,7 +6,14 @@ async function initializeDB() {
     try {
         await db.query(`
             CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+        
+            DROP MATERIALIZED VIEW IF EXISTS klines_1m CASCADE;
+            DROP MATERIALIZED VIEW IF EXISTS klines_1h CASCADE;
+            DROP MATERIALIZED VIEW IF EXISTS klines_1w CASCADE;
+            DROP MATERIALIZED VIEW IF EXISTS market_stats CASCADE;
+            DROP TABLE IF EXISTS trades CASCADE;
             DROP TABLE IF EXISTS sol_prices CASCADE;
+        
             CREATE TABLE sol_prices (
                 time TIMESTAMP WITH TIME ZONE NOT NULL,
                 price DOUBLE PRECISION,
@@ -14,6 +21,21 @@ async function initializeDB() {
                 currency_code VARCHAR(10)
             );
             SELECT create_hypertable('sol_prices', 'time');
+        
+            CREATE TABLE trades (
+                id BIGSERIAL,
+                market VARCHAR(20) NOT NULL,
+                price DOUBLE PRECISION NOT NULL,
+                amount DOUBLE PRECISION NOT NULL,
+                side VARCHAR(4) NOT NULL CHECK (side IN ('buy', 'sell')),
+                timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                order_id VARCHAR(50)
+            );
+        
+            SELECT create_hypertable('trades', 'timestamp');
+        
+            CREATE INDEX idx_trades_market_timestamp ON trades(market, timestamp DESC);
+            CREATE INDEX idx_trades_order_id ON trades(order_id);
         `);
 
         await db.query(`
