@@ -1,33 +1,23 @@
-import { Client } from 'pg'; 
-
-const client = new Client({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'postgres',
-    password: 'mysecretpassword',
-    port: 5432,
-});
-client.connect();
+import { DbClient } from './db-client';
 
 async function refreshViews() {
+    const db = DbClient.getInstance();
     try {
-        // Refresh kline views
         await Promise.all([
-            client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY klines_1m'),
-            client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY klines_1h'),
-            client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY klines_1w'),
-            client.query('REFRESH MATERIALIZED VIEW CONCURRENTLY market_stats')
+            db.query('REFRESH MATERIALIZED VIEW klines_1m'),
+            db.query('REFRESH MATERIALIZED VIEW klines_1h'),
+            db.query('REFRESH MATERIALIZED VIEW klines_1w'),
+            db.query('REFRESH MATERIALIZED VIEW market_stats')
         ]);
-        
-        console.log("All materialized views refreshed successfully");
+
+        console.log(new Date().toISOString(), "All materialized views refreshed successfully");
     } catch (error) {
         console.error("Error refreshing materialized views:", error);
-        throw error;
     }
 }
 
-refreshViews().catch(console.error);
+refreshViews();
 
 setInterval(() => {
-    refreshViews()
-}, 1000 * 10 );
+    refreshViews();
+}, 1000 * 10);
